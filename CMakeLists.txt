@@ -149,9 +149,11 @@ if(TD_WITH_TDSH)
         add_library(tdsh STATIC
             ${TDSH_CORE_SRCS}
             ${TDSH_WIN_DIR}/tdsh_platform_win.c
+            ${TDSH_WIN_DIR}/tdsh_win_commands.c
         )
         target_include_directories(tdsh PUBLIC ${TDSH_ROOT}/include ${TDSH_WIN_DIR})
-        target_link_libraries(tdsh PUBLIC tdsh_wincompat)
+        # ifconfig and ping use the IP Helper API.
+        target_link_libraries(tdsh PUBLIC tdsh_wincompat iphlpapi ws2_32)
         set(TDSH_COMPAT_FLAG -include ${TDSH_WIN_DIR}/tdsh_win_compat.h)
         target_compile_options(tdsh PRIVATE ${TDSH_COMPAT_FLAG})
     else()

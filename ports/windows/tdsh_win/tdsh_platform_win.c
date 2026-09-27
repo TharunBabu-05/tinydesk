@@ -127,5 +127,7 @@ int tdsh_win_init(const char *fs_root, const char *hostname)
     core.platform = &s_platform;
     int rc = tdsh_core_init(&core);
     if (rc) return rc;
-    return tdsh_register_core_builtins();
+    rc = tdsh_register_core_builtins();
+    if (rc) return rc;
+    return tdsh_win_register_commands();   /* ifconfig, ping, date, tz, ... */
 }
