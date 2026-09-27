@@ -49,7 +49,7 @@ static void launch(void)
     const td_sysinfo_t *si = td_sysinfo();
     td_window_desc_t d = {
         .title = "About tinydesk",
-        .rect = td_rect(-1, -1, 50, 15),
+        .rect = td_rect(-1, -1, 50, 16),
         .flags = TD_WIN_MOVABLE | TD_WIN_CLOSABLE,
         .on_close = on_close,
         .on_tick = on_tick,
@@ -87,6 +87,7 @@ static void launch(void)
     s_uptime = td_label(s_win, 2, y++, 0, "");
     if (si->extra) td_label(s_win, 2, y++, 0, si->extra);
     td_label(s_win, 2, y++, 0, TD_REPO_URL);
+    td_label(s_win, 2, y++, 0, TD_SHELL_REPO_URL);
 
     td_widget_t *ok = td_button(s_win, 20, y, "OK", on_ok, NULL);
     td_widget_focus(ok);
