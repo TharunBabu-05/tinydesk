@@ -1,0 +1,98 @@
+/*
+ * about.c - name, version, chip, SDK version, heap and uptime.
+ */
+#include <stdio.h>
+
+#include "td_apps.h"
+
+static td_window_t *s_win;
+static td_widget_t *s_heap, *s_uptime;
+
+static void update(void)
+{
+    const td_sysinfo_t *si = td_sysinfo();
+    uint32_t psram = si->psram_total ? si->psram_total() : 0;
+    if (si->free_heap && psram)
+        td_widget_printf(s_heap, "Free RAM:  %u KB + %u KB PSRAM", (unsigned)(si->free_heap() / 1024u),
+                         (unsigned)(si->psram_free() / 1024u));
+    else if (si->free_heap) td_widget_printf(s_heap, "Free heap: %u bytes", (unsigned)si->free_heap());
+    else td_widget_printf(s_heap, "Free heap: n/a");
+    uint32_t s = td_uptime_ms() / 1000u;
+    td_widget_printf(s_uptime, "Uptime:    %uh %02um %02us",
+                     (unsigned)(s / 3600u), (unsigned)(s / 60u % 60u), (unsigned)(s % 60u));
+}
+
+static void on_tick(td_window_t *win)
+{
+    (void)win;
+    update();
+}
+
+static void on_ok(td_widget_t *w, void *user)
+{
+    (void)user;
+    td_win_close(w->win);
+}
+
+static void on_close(td_window_t *win)
+{
+    (void)win;
+    s_win = NULL;
+}
+
+static void launch(void)
+{
+    if (td_win_is_open(s_win)) {
+        td_win_focus(s_win);
+        return;
+    }
+    const td_sysinfo_t *si = td_sysinfo();
+    td_window_desc_t d = {
+        .title = "About tinydesk",
+        .rect = td_rect(-1, -1, 50, 15),
+        .flags = TD_WIN_MOVABLE | TD_WIN_CLOSABLE,
+        .on_close = on_close,
+        .on_tick = on_tick,
+        .tick_ms = 1000,
+    };
+    s_win = td_win_create(&d);
+    if (!s_win) return;
+
+    /* The firmware's own version when the port has one (the ESP32's
+     * PROJECT_VER, as Software Update shows it), else the library's. */
+    td_ota_info_t fw;
+    bool have_fw = si->ota && si->ota->info;
+    if (have_fw) si->ota->info(&fw);
+    char title_text[TD_TEXT_MAX];
+    snprintf(title_text, sizeof(title_text), "tinydesk %s", have_fw ? fw.version : TD_VERSION);
+    td_widget_t *title = td_label(s_win, 0, 1, 0, title_text);
+    td_widget_set_align(title, TD_ALIGN_CENTER);
+    td_widget_set_color(title, td_theme()->accent, TD_COLOR_DEFAULT);
+    td_widget_t *tag = td_label(s_win, 0, 2, 0, "A windowed desktop for microcontrollers");
+    td_widget_set_align(tag, TD_ALIGN_CENTER);
+
+    char line[TD_TEXT_MAX];
+    snprintf(line, sizeof(line), "Platform:  %s", si->platform ? si->platform : "n/a");
+    td_label(s_win, 2, 4, 0, line);
+    snprintf(line, sizeof(line), "Chip:      %s", si->chip ? si->chip : "n/a");
+    td_label(s_win, 2, 5, 0, line);
+    snprintf(line, sizeof(line), "SDK:       %s", si->sdk_version ? si->sdk_version : "n/a");
+    td_label(s_win, 2, 6, 0, line);
+    int y = 7;
+    if (have_fw) {
+        snprintf(line, sizeof(line), "Built:     %.20s, %.8s", fw.built, fw.running);
+        td_label(s_win, 2, y++, 0, line);
+    }
+    s_heap = td_label(s_win, 2, y++, 0, "");
+    s_uptime = td_label(s_win, 2, y++, 0, "");
+    if (si->extra) td_label(s_win, 2, y++, 0, si->extra);
+    td_label(s_win, 2, y++, 0, TD_REPO_URL);
+
+    td_widget_t *ok = td_button(s_win, 20, y, "OK", on_ok, NULL);
+    td_widget_focus(ok);
+    update();
+}
+
+static const td_app_t s_app = { "About", launch, "i " };
+
+void td_about_register(void) { td_app_register(&s_app); }

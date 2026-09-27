@@ -1,0 +1,35 @@
+# Your own board wiring: never in git (see board.example.conf).
+# Only the board.example.conf files are shared.
+board.conf
+!board.example.conf
+
+# Build output
+build/
+build-*/
+ports/*/build/
+dist/
+
+# ESP-IDF: per-machine configuration and downloaded components
+# (sdkconfig is regenerated from sdkconfig.defaults).
+ports/*/sdkconfig
+ports/*/sdkconfig.old
+ports/*/managed_components/
+*.log
+
+# Firmware images
+*.bin
+*.elf
+*.map
+
+# Host desktop run-time data
+tinydesk_fs/
+tinydesk_settings.bin
+
+# Local leftovers
+local-review/
+__pycache__/
+*.pyc
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

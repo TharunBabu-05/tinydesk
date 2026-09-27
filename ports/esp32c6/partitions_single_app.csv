@@ -1,0 +1,7 @@
+# The layout before OTA (kept for reference and for restoring old backups).
+# tdsh-idf V0.4.1-C6 - ESP32-C6-WROOM-1/1U-N8 (8 MB flash)
+# Name,     Type, SubType, Offset,   Size,     Flags
+nvs,        data, nvs,     0x9000,   0x6000,
+phy_init,   data, phy,     0xF000,   0x1000,
+factory,    app,  factory, 0x10000,  0x300000,
+storage,    data, littlefs,0x310000, 0x4F0000,

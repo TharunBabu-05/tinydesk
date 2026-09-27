@@ -1,0 +1,61 @@
+# tinydesk on ESP32-C6-WROOM-1/1U-N8 (8 MB flash), ESP-IDF 5.3.1.
+
+# --- The USB Serial/JTAG port belongs to tinydesk alone -----------------
+# The ESP-IDF console is off: UART0 and UART1 are the two RS-485 Modbus
+# channels (main/rs485.c) and the LP UART is left for other uses. Logs are
+# still captured by the Log Viewer app (esp_log_set_vprintf in main.c).
+CONFIG_ESP_CONSOLE_NONE=y
+CONFIG_ESP_CONSOLE_SECONDARY_NONE=y
+
+# Even with the console on UART0, the ROM printf used by the bootloader and
+# early start-up also writes to USB Serial/JTAG. Keep boot quiet: the
+# bootloader only reports warnings, and the app starts at WARN and raises
+# the level to INFO in app_main() (after which logs only reach UART0 and
+# the Log Viewer). app_main() also detaches the ROM's USB output.
+CONFIG_BOOTLOADER_LOG_LEVEL_WARN=y
+CONFIG_LOG_DEFAULT_LEVEL_WARN=y
+CONFIG_LOG_MAXIMUM_LEVEL_INFO=y
+
+# 1 ms scheduler tick keeps the UI loop (5 ms sleep) responsive.
+CONFIG_FREERTOS_HZ=1000
+
+# --- Flash layout (same as the TinyDesk Shell firmware, so /fs data is kept) ---
+CONFIG_ESPTOOLPY_FLASHSIZE_8MB=y
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+CONFIG_PARTITION_TABLE_FILENAME="partitions.csv"
+
+CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_160=y
+CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ=160
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
+
+# --- TinyDesk Shell settings carried over from its reference firmware ----------
+CONFIG_ESP_SYSTEM_EVENT_TASK_STACK_SIZE=6144
+CONFIG_ESP_WIFI_STATIC_RX_BUFFER_NUM=8
+CONFIG_ESP_WIFI_DYNAMIC_RX_BUFFER_NUM=16
+CONFIG_ESP_WIFI_DYNAMIC_TX_BUFFER_NUM=16
+CONFIG_VFS_SUPPORT_DIR=y
+
+# Board wiring (RS-485, W6100 Ethernet, SD card...) is not configured here:
+# see board.example.conf.
+
+# --- Firmware updates (OTA) -----------------------------------------------
+# A new version runs on trial and the bootloader goes back if it does not
+# confirm itself (see main/ota_esp.c). Plain http:// is allowed for a local
+# update server; https:// is checked against the certificate bundle.
+CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE=y
+CONFIG_ESP_HTTPS_OTA_ALLOW_HTTP=y
+
+# --- TLS memory -------------------------------------------------------------
+# mbedTLS sizes its record buffers per message instead of keeping 16 KB + 4 KB
+# for the whole session: MQTT over TLS with a client certificate then fits
+# next to the SSH server.
+CONFIG_MBEDTLS_DYNAMIC_BUFFER=y
+
+# Task Manager: task list and CPU shares (a few bytes per task).
+CONFIG_FREERTOS_USE_TRACE_FACILITY=y
+CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS=y
+# FreeRTOS kernel code (non-ISR functions) in flash: on the C6 IRAM and the
+# heap share one RAM, so this gives the heap several KB back (SSH needs
+# 96 KB free to start).
+CONFIG_FREERTOS_PLACE_FUNCTIONS_INTO_FLASH=y

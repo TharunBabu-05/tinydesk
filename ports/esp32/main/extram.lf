@@ -1,0 +1,14 @@
+# The classic ESP32 has 180 KB of internal data RAM (the C6 has 452 KB),
+# and task stacks, DMA buffers and SSH's start check need it. tinydesk's and
+# TinyDesk Shell's static buffers (screen, terminal, shell session: about 75 KB) go
+# to PSRAM instead. None of them is used from an ISR or while the flash
+# cache is off.
+[mapping:td_extram_tinydesk]
+archive: libtinydesk.a
+entries:
+    * (extram_bss)
+
+[mapping:td_extram_tdsh]
+archive: libtdsh.a
+entries:
+    * (extram_bss)

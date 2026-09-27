@@ -1,0 +1,42 @@
+# tinydesk on the classic ESP32 with 4 MB flash and no PSRAM (ESP32-WROOM-32,
+# ESP32-DevKitC and similar), ESP-IDF 5.3.1.
+
+# --- UART0 belongs to the desktop -----------------------------------------
+# The ESP-IDF console is off (logs go to the Log Viewer app), the bootloader
+# is quiet, and the app starts at WARN and raises the level to INFO once
+# the ROM's UART output is detached (see main.c).
+CONFIG_ESP_CONSOLE_NONE=y
+CONFIG_BOOTLOADER_LOG_LEVEL_NONE=y
+CONFIG_LOG_DEFAULT_LEVEL_WARN=y
+CONFIG_LOG_MAXIMUM_LEVEL_INFO=y
+
+CONFIG_FREERTOS_HZ=1000
+
+# --- Flash: one 2.5 MB app, 1.4 MB /fs (partitions.csv); no PSRAM ----------
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+CONFIG_ESPTOOLPY_FLASHMODE_DIO=y
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+CONFIG_PARTITION_TABLE_FILENAME="partitions.csv"
+
+CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240=y
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
+
+# --- Internal RAM only: fewer Wi-Fi buffers --------------------------------
+CONFIG_ESP_SYSTEM_EVENT_TASK_STACK_SIZE=6144
+CONFIG_ESP_WIFI_STATIC_RX_BUFFER_NUM=8
+CONFIG_ESP_WIFI_DYNAMIC_RX_BUFFER_NUM=16
+CONFIG_ESP_WIFI_DYNAMIC_TX_BUFFER_NUM=16
+CONFIG_VFS_SUPPORT_DIR=y
+# Board wiring (console UART, RS-485, W6100 Ethernet, SD card...) is not
+# configured here: see board.example.conf.
+
+# --- TLS -----------------------------------------------------------------
+CONFIG_MBEDTLS_DYNAMIC_BUFFER=y
+
+# Task Manager: task list and CPU shares (a few bytes per task).
+CONFIG_FREERTOS_USE_TRACE_FACILITY=y
+CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS=y
+
+# FreeRTOS kernel code (non-ISR functions) in flash: IRAM for the drivers.
+CONFIG_FREERTOS_PLACE_FUNCTIONS_INTO_FLASH=y

@@ -1,0 +1,114 @@
+# Build every edition and platform, package them with tools/make_release.py
+# and, for a tag v*, publish them as a GitHub Release. The documentation site
+# and its web installer are hosted separately: the site's
+# tools/fetch_release.py copies a release into it.
+#
+#   TinyDesk Desktop: ESP32-C6, ESP32 (PSRAM), ESP32 (4 MB) firmware;
+#                     Linux and Windows programs
+#   TinyDesk Shell:   ESP32-C6, ESP32 firmware; Linux program
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  checks:
+    uses: ./.github/workflows/ci.yml
+
+  host-linux:
+    needs: checks
+    runs-on: ubuntu-22.04          # an older glibc: the programs run on more distributions
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Build the desktop and the shell
+        run: |
+          sudo apt-get install -y ninja-build
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build
+          cmake -S third_party/tdsh -B build-shell -G Ninja -DTDSH_BUILD_HOST=ON -DCMAKE_BUILD_TYPE=Release
+          cmake --build build-shell
+          ctest --test-dir build --output-on-failure --no-tests=error
+          ctest --test-dir build-shell --output-on-failure --no-tests=error
+          strip build/tinydesk build-shell/tdsh_host
+      - uses: actions/upload-artifact@v4
+        with:
+          name: host-linux
+          path: |
+            build/tinydesk
+            build-shell/tdsh_host
+
+  host-windows:
+    needs: checks
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Build the desktop (MinGW, static)
+        shell: bash
+        run: |
+          choco install ninja -y
+          cmake -S . -B build -G Ninja -DCMAKE_C_COMPILER=gcc -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXE_LINKER_FLAGS=-static
+          cmake --build build
+          ctest --test-dir build --output-on-failure --no-tests=error
+          strip build/tinydesk.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: host-windows
+          path: build/tinydesk.exe
+
+  release:
+    needs: [host-linux, host-windows]
+    runs-on: ubuntu-latest
+    container: espressif/idf:v5.3.1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/download-artifact@v4
+        with:
+          path: host
+      - name: Build the firmware (both editions, every board)
+        shell: bash
+        run: |
+          . $IDF_PATH/export.sh
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            export TD_VERSION="${GITHUB_REF_NAME#v}"
+          fi
+          (cd ports/esp32c6 && idf.py -DTD_USE_EXAMPLE_BOARD=ON build)
+          (cd ports/esp32 && IDF_COMPONENT_MANAGER=0 idf.py -DTD_USE_EXAMPLE_BOARD=ON build)
+          (cd ports/esp32-4mb && IDF_COMPONENT_MANAGER=0 idf.py -DTD_USE_EXAMPLE_BOARD=ON build)
+          (cd third_party/tdsh && idf.py build)
+          (cd third_party/tdsh/projects/esp32 && idf.py build)
+      - name: Package
+        shell: bash
+        run: |
+          . $IDF_PATH/export.sh
+          python tools/make_release.py \
+            --host-linux-desktop host/host-linux/build/tinydesk \
+            --host-linux-shell host/host-linux/build-shell/tdsh_host \
+            --host-windows-desktop host/host-windows/tinydesk.exe
+          echo "VERSION=$(python -c "import json;print(json.load(open('ports/esp32c6/build/project_description.json'))['project_version'])")" >> "$GITHUB_ENV"
+
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          prerelease: true
+          body_path: RELEASE_NOTES.md
+          name: TinyDesk ${{ env.VERSION }}
+          files: |
+            dist/tinydesk-${{ env.VERSION }}/*.bin
+            dist/tinydesk-${{ env.VERSION }}/*.tar.gz
+            dist/tinydesk-${{ env.VERSION }}/*.zip
+            dist/tinydesk-${{ env.VERSION }}/manifest-*.json
+            dist/tinydesk-${{ env.VERSION }}/SHA256SUMS.txt
+            dist/tinydesk-${{ env.VERSION }}/README.txt
