@@ -2,7 +2,7 @@
 
 ## The story
 
-**An ESP32. A terminal. A desktop you can drag windows around.**
+**A tiny board. A real desktop. Inside your terminal.**
 
 TinyDesk runs a mouse-operated, windowed desktop on an ESP32. Your computer
 displays its terminal output and sends keyboard and mouse input. Open Files,

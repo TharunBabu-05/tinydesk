@@ -1,13 +1,17 @@
 # TinyDesk
 
-**An ESP32. A terminal. A desktop you can drag windows around.**
+**A tiny board. A real desktop. Inside your terminal.**
 
-Developer preview. Build from source using the instructions below.
+v0.1.0 · Developer preview. Build from source using the instructions below.
 The web installer is being tested locally; a public address will follow.
 
-![TinyDesk desktop on an ESP32](docs/images/desktop.png)
+![Four TinyDesk windows opened, dragged and resized side by side on a physical ESP32, then About](docs/media/desktop-demo-esp32.gif)
 
-*An actual terminal capture. The ESP32 runs the desktop; the computer displays it.*
+*One continuous take from an ESP32 over USB serial, at normal speed: Editor,
+Files, System Monitor and Terminal are opened, dragged and resized side by
+side, then About. The board runs the desktop; the computer only displays it.
+[Watch the MP4](docs/media/desktop-demo-esp32.mp4) or read the
+[capture details](docs/media/README.md).*
 
 TinyDesk draws overlapping, draggable text-mode windows with ANSI escape
 sequences and reads the keyboard and mouse back from the terminal. There is
@@ -30,6 +34,10 @@ Terminal window. The core is portable C11; ports exist for ESP32 boards
 * Apps: Terminal (the shell), Files, Editor, Network, MQTT, Modbus (TCP and
   RTU), Task Manager, System Monitor, Log Viewer, Settings, Software Update
   (OTA), and a small API for writing your own.
+* Shell scripts (`.tdsh`): variables, `if`/`while`/`for`, functions, pipes
+  and redirection, run from the Terminal or with right-click → Run on the
+  desktop. Language reference: `docs/SCRIPTING.md` in
+  [TinyDesk Shell](https://github.com/schikani/tinydesk-shell).
 * Optional, root-only desktop takeover over unencrypted Telnet. SSH provides
   an encrypted shell and SFTP, not the windowed desktop. FTP, SMB mounts,
   Wi-Fi and W6100 Ethernet are available from the shell.
