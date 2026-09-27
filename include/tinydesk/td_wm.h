@@ -270,7 +270,10 @@ typedef struct {
 /* Active theme. */
 const td_theme_t *td_theme(void);
 
-/* Built-in themes: 0 = Classic, 1 = Dark. */
+/* Built-in themes: 0 = Classic, 1 = Dark (the default). */
+#define TD_THEME_CLASSIC 0
+#define TD_THEME_DARK 1
+#define TD_THEME_DEFAULT TD_THEME_DARK
 int td_theme_count(void);
 const td_theme_t *td_theme_get(int index);
 void td_theme_set(int index);

@@ -31,7 +31,7 @@ static const td_theme_t s_themes[] = {
     },
     {
         .name = "Dark",
-        .desktop_fg = 237, .desktop_bg = 234,
+        .desktop_fg = 24, .desktop_bg = 234,   /* a clearly visible teal pattern */
         .win_fg = 252, .win_bg = 236,
         .frame_fg = 240, .frame_active_fg = 75,
         .title_fg = 231, .title_bg = 25,
@@ -54,7 +54,7 @@ static const td_theme_t s_themes[] = {
 
 #define THEME_COUNT ((int)(sizeof(s_themes) / sizeof(s_themes[0])))
 
-static int s_current;
+static int s_current = TD_THEME_DEFAULT;
 static uint32_t s_pattern = 0x2591;   /* light shade */
 static bool s_icons = true;
 

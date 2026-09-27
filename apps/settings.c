@@ -83,12 +83,12 @@ void td_settings_apply_saved(void)
 {
     settings_blob_t b;
     if (!load_blob(&b)) {
-        b.theme = 0;                  /* built-in defaults */
+        b.theme = TD_THEME_DEFAULT;   /* built-in defaults */
         b.ascii = td_get_ascii_mode() ? 1 : 0;
         b.pattern = 0;
         b.hide_icons = 0;
     }
-    td_theme_set(b.theme < td_theme_count() ? b.theme : 0);
+    td_theme_set(b.theme < td_theme_count() ? b.theme : TD_THEME_DEFAULT);
     if ((b.ascii != 0) != td_get_ascii_mode()) {
         td_set_ascii_mode(b.ascii != 0);
         td_full_redraw();
