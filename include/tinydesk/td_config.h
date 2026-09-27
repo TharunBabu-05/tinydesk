@@ -8,12 +8,14 @@
 #define TD_CONFIG_H
 
 /* Largest terminal size the screen buffers can hold. Each buffer costs
- * TD_MAX_COLS * TD_MAX_ROWS * 8 bytes and there are two of them. */
+ * TD_MAX_COLS * TD_MAX_ROWS * 8 bytes and there are two of them. The
+ * defaults are for PCs (a maximised terminal on a large screen); the
+ * ESP-IDF builds set smaller limits. */
 #ifndef TD_MAX_COLS
-#define TD_MAX_COLS 132
+#define TD_MAX_COLS 400
 #endif
 #ifndef TD_MAX_ROWS
-#define TD_MAX_ROWS 50
+#define TD_MAX_ROWS 150
 #endif
 
 /* Longest real path the apps handle: the file system root plus the path
