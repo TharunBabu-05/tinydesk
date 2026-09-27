@@ -20,6 +20,7 @@ static td_stats_t s_stats;
 
 static bool s_running;
 static bool s_resync_pending;     /* resend setup + full redraw */
+static bool s_repaint_pending;    /* clear + full redraw (the terminal was resized) */
 static bool s_have_input;         /* any byte ever received */
 static uint32_t s_last_input_ms;
 static uint32_t s_last_size_query_ms;
@@ -46,11 +47,14 @@ static void apply_size(int cols, int rows)
 {
     /* A terminal that changed size has usually cleared or shifted what it
      * showed, even when the size we use stays the same (the window grew
-     * past TD_MAX_COLS x TD_MAX_ROWS, or shrank back to it): redraw all. */
+     * past TD_MAX_COLS x TD_MAX_ROWS, or shrank back to it): redraw all.
+     * Only repaint, without the terminal setup: the Windows console
+     * answers a repeated "alternate screen on" with a new alternate
+     * screen of the old size, which undid every resize. */
     if (cols != s_stats.term_cols || rows != s_stats.term_rows) {
         s_stats.term_cols = cols;
         s_stats.term_rows = rows;
-        s_resync_pending = true;
+        s_repaint_pending = true;
     }
     if (cols < TD_MIN_COLS) cols = TD_MIN_COLS;
     if (rows < TD_MIN_ROWS) rows = TD_MIN_ROWS;
@@ -64,7 +68,18 @@ static void apply_size(int cols, int rows)
     td_buffer_init(&s_front, cols, rows);
     td_wm_set_screen_size(cols, rows);
     /* Clear stray cells outside the old area too. */
-    s_resync_pending = true;
+    s_repaint_pending = true;
+}
+
+/* Clear the terminal and send the whole screen again. */
+static void repaint(void)
+{
+    s_renderer.write_failed = false;
+    td_render_raw(&s_renderer, "\x1b[0m\x1b[2J\x1b[H");
+    td_render_reset_state(&s_renderer);
+    td_buffer_invalidate(&s_front);
+    td_wm_invalidate();
+    s_repaint_pending = false;
 }
 
 /* Send the terminal setup and the size query, and force a full redraw. */
@@ -77,6 +92,7 @@ static void resync(void)
     td_buffer_invalidate(&s_front);
     td_wm_invalidate();
     s_resync_pending = false;
+    s_repaint_pending = false;
     s_last_size_query_ms = td_millis();
 }
 
@@ -251,6 +267,9 @@ bool td_step(void)
 
     if (s_resync_pending) {
         resync();
+        render_frame();
+    } else if (s_repaint_pending) {
+        repaint();
         render_frame();
     } else if (s_stats.link_up && td_wm_needs_redraw()) {
         render_frame();
