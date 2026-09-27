@@ -36,6 +36,9 @@ endif()
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(tinydesk)
 
+# Fresh build date and time in every firmware image.
+include("${TD_ROOT}/ports/common/app_desc_stamp.cmake")
+
 include("${TDSH_SDK_ROOT}/ports/esp_idf/tdsh_espidf_project_setup.cmake")
 
 # With the component manager off, dependencies that only its manifests
