@@ -330,7 +330,7 @@ static void launch(void)
     td_mqtt_status(&st);
     td_widget_set_text(s_broker, st.broker[0] ? st.broker : conf_exists() ? DEFAULT_CONF : "localhost:1883");
     td_widget_set_text(s_topic, "tinydesk/test");
-    td_widget_set_text(s_payload, "hello from tinydesk");
+    td_widget_set_text(s_payload, "hello from TinyDesk");
     U->first_seq = 1;
     U->shown_last = (uint32_t)-1;
     update();

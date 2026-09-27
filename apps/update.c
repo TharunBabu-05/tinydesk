@@ -137,7 +137,7 @@ static void on_draw(td_window_t *win, int w, int h)
     ota()->status(&st);
     char line[200];
 
-    snprintf(line, sizeof(line), "Installed   tinydesk %s  (built %s, ESP-IDF %s)", i.version, i.built, i.sdk);
+    snprintf(line, sizeof(line), "Installed   TinyDesk %s  (built %s, ESP-IDF %s)", i.version, i.built, i.sdk);
     td_textn(1, 0, line, w - 1, t->win_fg, t->win_bg, TD_BOLD);
     snprintf(line, sizeof(line), "Running     from %s%s", i.running,
              i.on_trial ? ", on trial: confirms itself 30 s after start-up" : ", confirmed");
@@ -151,7 +151,7 @@ static void on_draw(td_window_t *win, int w, int h)
              t->dim, t->win_bg, 0);
 
     if (st.new_version[0]) {
-        snprintf(line, sizeof(line), "Update      tinydesk %s  (built %s)", st.new_version, st.new_built);
+        snprintf(line, sizeof(line), "Update      TinyDesk %s  (built %s)", st.new_version, st.new_built);
         td_textn(1, 8, line, w - 1, t->win_fg, t->win_bg, 0);
     }
     if (st.state == TD_OTA_INSTALLING || st.state == TD_OTA_DONE || (st.state == TD_OTA_FAILED && st.done)) {

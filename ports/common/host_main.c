@@ -132,7 +132,7 @@ void td_host_setup(const td_hal_t *hal, const char *platform_name)
     td_set_sysinfo(&s_info);
 
     td_init(hal);
-    td_logf('I', "tinydesk %s on %s", TD_VERSION, platform_name);
+    td_logf('I', "TinyDesk %s on %s", TD_VERSION, platform_name);
     td_logf('I', "terminal size %dx%d", td_stats()->cols, td_stats()->rows);
 
     td_apps_register_all();
@@ -140,7 +140,7 @@ void td_host_setup(const td_hal_t *hal, const char *platform_name)
     td_terminal_set_backend(td_tdsh_host_backend(fs_root, "tinydesk"));
     td_logf('I', "TinyDesk Shell sandbox: %s", fs_root);
 #endif
-    td_msgbox("Welcome to tinydesk",
+    td_msgbox("Welcome to TinyDesk",
               "Press F10 or click [Start] for apps.\nF6 switches windows, F11 is full screen.\nOpen the Terminal now?",
               "Terminal|Later", welcome_done, NULL);
 }

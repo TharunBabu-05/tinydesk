@@ -357,7 +357,7 @@ static void print_info(void)
 {
     td_ota_info_t i;
     ota_info(&i);
-    printf("Firmware:  tinydesk %s, built %s, ESP-IDF %s\n", i.version, i.built, i.sdk);
+    printf("Firmware:  TinyDesk %s, built %s, ESP-IDF %s\n", i.version, i.built, i.sdk);
     printf("Running:   %s%s\n", i.running, i.on_trial ? " (on trial: confirms itself 30 s after start-up)" : "");
     if (i.other_version[0])
         printf("Other slot: %s has version %s%s\n", i.next, i.other_version, i.can_roll_back ? " (ota rollback)" : "");

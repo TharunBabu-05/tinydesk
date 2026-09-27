@@ -15,8 +15,8 @@ static void update(void)
     if (si->free_heap && psram)
         td_widget_printf(s_heap, "Free RAM:  %u KB + %u KB PSRAM", (unsigned)(si->free_heap() / 1024u),
                          (unsigned)(si->psram_free() / 1024u));
-    else if (si->free_heap) td_widget_printf(s_heap, "Free heap: %u bytes", (unsigned)si->free_heap());
-    else td_widget_printf(s_heap, "Free heap: n/a");
+    else if (si->free_heap) td_widget_printf(s_heap, "Free RAM:  %u KB", (unsigned)(si->free_heap() / 1024u));
+    else td_widget_printf(s_heap, "Free RAM:  n/a");
     uint32_t s = td_uptime_ms() / 1000u;
     td_widget_printf(s_uptime, "Uptime:    %uh %02um %02us",
                      (unsigned)(s / 3600u), (unsigned)(s / 60u % 60u), (unsigned)(s % 60u));
@@ -47,9 +47,16 @@ static void launch(void)
         return;
     }
     const td_sysinfo_t *si = td_sysinfo();
+    /* The firmware's own version when the port has one (the ESP32's
+     * PROJECT_VER, as Software Update shows it), else the library's. */
+    td_ota_info_t fw;
+    bool have_fw = si->ota && si->ota->info;
+    if (have_fw) si->ota->info(&fw);
+    /* 14 rows with the optional Built and extra lines; drop the ones missing. */
+    int h = 14 + (have_fw ? 1 : 0) + (si->extra ? 1 : 0);
     td_window_desc_t d = {
-        .title = "About tinydesk",
-        .rect = td_rect(-1, -1, 50, 16),
+        .title = "About TinyDesk",
+        .rect = td_rect(-1, -1, 50, h),
         .flags = TD_WIN_MOVABLE | TD_WIN_CLOSABLE,
         .on_close = on_close,
         .on_tick = on_tick,
@@ -58,13 +65,8 @@ static void launch(void)
     s_win = td_win_create(&d);
     if (!s_win) return;
 
-    /* The firmware's own version when the port has one (the ESP32's
-     * PROJECT_VER, as Software Update shows it), else the library's. */
-    td_ota_info_t fw;
-    bool have_fw = si->ota && si->ota->info;
-    if (have_fw) si->ota->info(&fw);
     char title_text[TD_TEXT_MAX];
-    snprintf(title_text, sizeof(title_text), "tinydesk %s", have_fw ? fw.version : TD_VERSION);
+    snprintf(title_text, sizeof(title_text), "TinyDesk %s", have_fw ? fw.version : TD_VERSION);
     td_widget_t *title = td_label(s_win, 0, 1, 0, title_text);
     td_widget_set_align(title, TD_ALIGN_CENTER);
     td_widget_set_color(title, td_theme()->accent, TD_COLOR_DEFAULT);

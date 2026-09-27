@@ -324,7 +324,7 @@ static const td_desktop_provider_t s_provider = {
 /* ------------------------------------------------------------ init */
 
 static const char s_welcome[] =
-    "Welcome to tinydesk!\n"
+    "Welcome to TinyDesk!\n"
     "\n"
     "Files in this Desktop folder show up as icons on the desktop.\n"
     "\n"
