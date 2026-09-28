@@ -1,14 +1,16 @@
 # Developer-preview release gate
 
 Source lives in `schikani/tinydesk` with `schikani/tinydesk-shell` pinned as a
-submodule. The documentation and installer are maintained separately and are
-currently previewed locally. A public HTTPS address is still pending.
+submodule. The documentation and web installer live in
+`schikani/tinydesk-docs` and are published with GitHub Pages at
+https://schikani.github.io/tinydesk-docs/.
 
 ## Required evidence
 
 - Run host CMake/CTest on Linux and Windows and all POSIX shell tests.
-- Build Desktop for ESP32-C6 8 MB, ESP32 16 MB with PSRAM, and ESP32 4 MB.
-  Build both Shell editions before including them in a public release.
+- Build Desktop for ESP32-C6 8 MB, ESP32 16 MB with PSRAM, and ESP32 4 MB,
+  the Shell edition for ESP32-C6 and ESP32, and the Windows and Linux programs
+  of both editions (`tinydesk.exe`, `tdsh.exe`, and their Linux builds).
 - Record the source revision and SHA-256 of every tested image. Never reuse
   an older dist folder as evidence for changed source.
 - On each board: cold boot, drag/resize, open/save/reopen a file, shell command,
@@ -29,19 +31,27 @@ currently previewed locally. A public HTTPS address is still pending.
 
 ## Release process
 
-1. Push shell changes first and record the tested submodule revision in the
-   desktop repository. Confirm CI succeeds from a clean recursive checkout.
-2. Configure the public HTTPS site address when available and verify all links.
+1. Push shell changes first. For a shell release, set its `VERSION` file and
+   tag `tinydesk-shell` with `v<VERSION>`: its release workflow builds the
+   Shell firmware, `tdsh.exe` and the Linux program into a **draft
+   prerelease**. Review and publish it.
+2. Record the tested submodule revision in the desktop repository and push.
+   Confirm CI succeeds from a clean recursive checkout.
 3. Tag the tested revision. The release workflow calls CI, tests its release
-   host binaries, builds firmware, and creates a **draft prerelease**.
+   host binaries (MQTT over TLS must be built in), builds firmware, and
+   creates a **draft prerelease**.
 4. Review the draft: version, all five board/edition images, manifests,
-   desktop downloads, checksums, source and licence material.
-5. Import the release into the website with `tools/fetch_release.py`; run
-   the site's link checker and review its installer locally.
-6. Publish only after the live HTTPS installation test and evidence above.
-   ESP Web Tools requires HTTPS and resolves firmware paths relative to the
-   manifest: [official integration documentation](https://esphome.github.io/esp-web-tools/).
+   the four PC downloads, checksums, source and licence material, and the
+   release text.
+5. Publish the draft, then run the docs site's *GitHub Pages* workflow
+   (Actions, Run workflow): `tools/fetch_release.py` copies the newest
+   published release into the installer after checking `SHA256SUMS.txt`, and
+   `tools/check_links.py` checks the links.
+6. Test an installation from the live site on each advertised board before
+   announcing the release. ESP Web Tools requires HTTPS and resolves firmware
+   paths relative to the manifest:
+   [official integration documentation](https://esphome.github.io/esp-web-tools/).
 
 Use [LAUNCH_KIT.md](LAUNCH_KIT.md) for the filmed demo and preview announcement.
-Hardware tests in this workspace are recorded separately in the local review
-report; a build alone is not a passed hardware test.
+Record hardware tests in [VALIDATION.md](VALIDATION.md); a build alone is not
+a passed hardware test.

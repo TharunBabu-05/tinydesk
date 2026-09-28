@@ -15,7 +15,7 @@ set(IDF_TARGET "esp32c6" CACHE STRING "tinydesk target")
 list(APPEND EXTRA_COMPONENT_DIRS "${TDSH_SDK_ROOT}/ports/esp_idf/components")
 
 # The firmware version shown by Software Update and `ota status`.
-# Override for a test build: set TD_VERSION=0.2.1 before idf.py build.
+# Override for a test build: set TD_VERSION=0.1.1 before idf.py build.
 if(DEFINED ENV{TD_VERSION})
     set(PROJECT_VER "$ENV{TD_VERSION}")
 else()

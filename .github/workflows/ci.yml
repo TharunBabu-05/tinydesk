@@ -93,14 +93,23 @@ jobs:
           (cd third_party/tdsh/projects/esp32 && idf.py build)
 
   shell-tests:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-      - name: TinyDesk Shell host build and tests
+      - name: TinyDesk Shell host build and tests (Linux; tdsh.exe on Windows)
+        shell: bash
         run: |
-          sudo apt-get install -y ninja-build
-          cmake -S third_party/tdsh -B build-shell -G Ninja -DTDSH_BUILD_HOST=ON
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            choco install ninja -y
+            cmake -S third_party/tdsh -B build-shell -G Ninja -DCMAKE_C_COMPILER=gcc -DTDSH_BUILD_HOST=ON
+          else
+            sudo apt-get install -y ninja-build
+            cmake -S third_party/tdsh -B build-shell -G Ninja -DTDSH_BUILD_HOST=ON
+          fi
           cmake --build build-shell
-          ctest --test-dir build-shell --output-on-failure
+          ctest --test-dir build-shell --output-on-failure --no-tests=error

@@ -146,7 +146,8 @@ if(TD_WITH_TDSH)
     if(WIN32)
         # The TinyDesk Shell core expects newlib/glibc stdio; the compat layer adds
         # per-thread stdin/stdout and funopen() on the Windows C runtime.
-        set(TDSH_WIN_DIR ${CMAKE_CURRENT_SOURCE_DIR}/ports/windows/tdsh_win)
+        # (TinyDesk Shell's Windows port, ports/windows in the submodule.)
+        set(TDSH_WIN_DIR ${TDSH_ROOT}/ports/windows)
         # The compat layer itself must see the real C-runtime stdio, so it is
         # built separately, without the forced include.
         add_library(tdsh_wincompat STATIC ${TDSH_WIN_DIR}/tdsh_win_compat.c)

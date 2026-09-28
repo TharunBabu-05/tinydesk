@@ -26,7 +26,7 @@ int main(void)
         .flags = TD_WIN_MOVABLE,
     };
     td_window_t *win = td_win_create(&desc);
-    td_label(win, 2, 1, 0, "Hello from tinydesk!");
+    td_label(win, 2, 1, 0, "Hello from TinyDesk!");
     td_button(win, 10, 3, "Quit", on_quit, NULL);
 
     td_run();

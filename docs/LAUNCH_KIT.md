@@ -25,8 +25,9 @@ If no sensor/test device is connected, replace 15–22 s with a shell command
 that reads the saved file. Do not present simulated data as a live measurement.
 Record the board and terminal together before making a close-up cut. Keep the
 mouse visible and use readable 80×25 cells; preserve normal playback speed for
-the interaction that proves responsiveness. The existing SVG art is an
-illustration, not evidence of physical-board operation.
+the interaction that proves responsiveness. The demo in `docs/media`
+(`desktop-demo-esp32.gif` and `.mp4`) is a capture of a physical ESP32; it
+is not a substitute for footage of the board and terminal together.
 
 ## Record once, make three useful cuts
 
@@ -52,7 +53,8 @@ imaginary performance, compatibility, download counts, or fabricated reactions.
 > the terminal. I’m opening a developer preview and looking for fresh-board
 > installation reports. Board requirements, source, and setup are in the release.
 
-Link the tested release at https://github.com/schikani/tinydesk/releases. Include the actual board/firmware
+Link the tested release at https://github.com/schikani/tinydesk/releases and the web installer at
+https://schikani.github.io/tinydesk-docs/install/. Include the actual board/firmware
 used in the clip and link the longer installation walkthrough. Don't announce a
 public installer until an independent tester has completed it from the live site.
 

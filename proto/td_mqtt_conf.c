@@ -15,7 +15,7 @@
 #include "td_tls.h"
 
 const char td_mqtt_config_template[] =
-    "# MQTT client settings (tinydesk). One setting per line; '#' starts a comment.\n"
+    "# MQTT client settings (TinyDesk). One setting per line; '#' starts a comment.\n"
     "# Used by 'mqtt connect' with no broker, 'mqtt connect -c <file>' and the\n"
     "# MQTT app (type the file name, e.g. ~/mqtt.conf, as the broker).\n"
     "\n"

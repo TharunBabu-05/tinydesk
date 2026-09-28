@@ -436,7 +436,7 @@ static int cmd_ota(tdsh_session_t *session, int argc, char **argv)
            "  ota check <url|file>          show the version of an update\n"
            "  ota install <url|file>        install it (then: ota restart)\n"
            "  ota cancel | restart | rollback\n"
-           "url: http://... or https://... to a tinydesk .bin; file: a .bin on this device.\n");
+           "url: http://... or https://... to a TinyDesk .bin; file: a .bin on this device.\n");
     return 2;
 }
 

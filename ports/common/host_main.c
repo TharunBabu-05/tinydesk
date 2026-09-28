@@ -149,7 +149,7 @@ int td_host_main(const char *platform_name)
 {
     const td_hal_t *hal = td_host_hal_open();
     if (!hal) {
-        fprintf(stderr, "tinydesk needs an interactive terminal (Windows Terminal, xterm, ...).\n");
+        fprintf(stderr, "TinyDesk needs an interactive terminal (Windows Terminal, xterm, ...).\n");
         return 1;
     }
     td_host_setup(hal, platform_name);

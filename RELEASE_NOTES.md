@@ -16,8 +16,9 @@ what breaks.
   cannot show the desktop).
 * **Without the browser:** each `*-factory.bin` below is flashed at offset 0
   with esptool; see the installer page for the commands.
-* **PC programs:** `tinydesk-desktop-windows-x64.zip` (Windows 10 or later, run
-  it in Windows Terminal), `tinydesk-desktop-linux-x86_64.tar.gz` and
+* **PC programs:** `tinydesk-desktop-windows-x64.zip` and
+  `tinydesk-shell-windows-x64.zip` (Windows 10 or later, run them in Windows
+  Terminal), `tinydesk-desktop-linux-x86_64.tar.gz` and
   `tinydesk-shell-linux-x86_64.tar.gz` (x86_64, built on Ubuntu 22.04).
 
 Check the files against `SHA256SUMS.txt`. The firmware is not signed.

@@ -94,7 +94,7 @@ typedef struct {
 enum { TD_OTA_IDLE, TD_OTA_CHECKING, TD_OTA_INSTALLING, TD_OTA_DONE, TD_OTA_FAILED };
 
 typedef struct {
-    char version[32];          /* running firmware, e.g. "0.2.0" */
+    char version[32];          /* running firmware, e.g. "0.1.0" */
     char built[32];            /* "Sep 24 2026 10:12:03" */
     char sdk[32];              /* "v5.3.1" */
     char running[17];          /* slot names, e.g. "ota_0" */

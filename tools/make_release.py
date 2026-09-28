@@ -26,7 +26,7 @@ see its README.
 
     python tools/make_release.py [--site ../tinydesk-site/site] [--out dist] [--allow-board-conf]
         [--host-linux-desktop build/tinydesk] [--host-linux-shell build-shell/tdsh_host]
-        [--host-windows-desktop build/tinydesk.exe]
+        [--host-windows-desktop build/tinydesk.exe] [--host-windows-shell build-shell/tdsh_host.exe]
 
 The shell edition is optional: boards whose build is missing are left out
 (with a note). Needs esptool (in the ESP-IDF Python environment; `pip
@@ -222,6 +222,7 @@ def main():
     ap.add_argument("--host-linux-desktop", help="the Linux desktop program (build/tinydesk)")
     ap.add_argument("--host-linux-shell", help="the Linux shell program (build-shell/tdsh_host)")
     ap.add_argument("--host-windows-desktop", help="the Windows desktop program (build/tinydesk.exe)")
+    ap.add_argument("--host-windows-shell", help="the Windows shell program (build-shell/tdsh_host.exe)")
     args = ap.parse_args()
 
     found = collect(args)
@@ -280,6 +281,12 @@ def main():
             "Start tinydesk.exe inside Windows Terminal (it needs a terminal with mouse",
             "and VT support; the old console window works without the mouse).", "",
             "Files live in .\\tinydesk_fs next to where you start it. Quit: Start > Exit."]))
+    if args.host_windows_shell:
+        hosts.append(("tinydesk-shell-windows-x64", args.host_windows_shell, "tdsh.exe", shell_licence, [
+            "TinyDesk Shell %s for Windows (x64)" % found.get("shell", (version,))[0], "",
+            "Start tdsh.exe in Windows Terminal (or any console window):", "", "  .\\tdsh.exe", "",
+            "Its files live in %LOCALAPPDATA%\\tdsh\\rootfs (your real files are not used).",
+            "Type 'help' for the commands, 'exit' to leave."]))
     for name, binary, exe, lic, notes in hosts:
         package_host(out, name, binary, exe, lic, notes)
     if hosts:

@@ -147,7 +147,7 @@ static void on_draw(td_window_t *win, int w, int h)
     td_textn(1, 2, line, w - 1, t->dim, t->win_bg, 0);
 
     td_text(1, 4, "Update from", t->win_fg, t->win_bg, 0);
-    td_textn(1, 5, "http:// or https:// URL of a tinydesk .bin, or a file here (e.g. ~/tinydesk.bin)", w - 1,
+    td_textn(1, 5, "http:// or https:// URL of a TinyDesk .bin, or a file here (e.g. ~/tinydesk.bin)", w - 1,
              t->dim, t->win_bg, 0);
 
     if (st.new_version[0]) {

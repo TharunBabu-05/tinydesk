@@ -5,7 +5,7 @@
 #
 #   TinyDesk Desktop: ESP32-C6, ESP32 (PSRAM), ESP32 (4 MB) firmware;
 #                     Linux and Windows programs
-#   TinyDesk Shell:   ESP32-C6, ESP32 firmware; Linux program
+#   TinyDesk Shell:   ESP32-C6, ESP32 firmware; Linux and Windows programs
 name: release
 
 on:
@@ -85,6 +85,14 @@ jobs:
           cmake --build build
           ctest --test-dir build --output-on-failure --no-tests=error
           strip build/tinydesk.exe
+      - name: Build the shell (tdsh.exe, MinGW, static)
+        shell: bash
+        run: |
+          cmake -S third_party/tdsh -B build-shell -G Ninja -DCMAKE_C_COMPILER=gcc -DTDSH_BUILD_HOST=ON \
+            -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXE_LINKER_FLAGS=-static
+          cmake --build build-shell
+          ctest --test-dir build-shell --output-on-failure --no-tests=error
+          strip build-shell/tdsh_host.exe
       - name: MQTT over TLS is built in
         shell: bash
         run: |
@@ -96,7 +104,9 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: host-windows
-          path: build/tinydesk.exe
+          path: |
+            build/tinydesk.exe
+            build-shell/tdsh_host.exe
 
   release:
     needs: [host-linux, host-windows]
@@ -128,7 +138,8 @@ jobs:
           python tools/make_release.py \
             --host-linux-desktop host/host-linux/build/tinydesk \
             --host-linux-shell host/host-linux/build-shell/tdsh_host \
-            --host-windows-desktop host/host-windows/tinydesk.exe
+            --host-windows-desktop host/host-windows/build/tinydesk.exe \
+            --host-windows-shell host/host-windows/build-shell/tdsh_host.exe
           echo "VERSION=$(python -c "import json;print(json.load(open('ports/esp32c6/build/project_description.json'))['project_version'])")" >> "$GITHUB_ENV"
 
       - name: Release

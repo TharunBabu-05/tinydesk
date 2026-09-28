@@ -70,7 +70,7 @@ static void follow_session(void)
         char note[160];
         const char *peer = telnet_peer();
         snprintf(note, sizeof(note),
-                 "\x1b[0m\x1b[2J\x1b[H\r\n  The tinydesk desktop is in use over Telnet%s%s.\r\n"
+                 "\x1b[0m\x1b[2J\x1b[H\r\n  The TinyDesk desktop is in use over Telnet%s%s.\r\n"
                  "  It comes back here when that session ends.\r\n",
                  peer ? " from " : "", peer ? peer : "");
         link_write((const uint8_t *)note, (int)strlen(note));

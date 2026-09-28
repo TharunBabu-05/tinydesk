@@ -11,7 +11,7 @@ that every app, peripheral or terminal has been validated.
   scripting and shared-console recovery policy.
 - Host desktop simulator: embedded shell executed a command.
 - Source archive: private-file exclusion and opt-in documentation tests passed.
-- Documentation site: 33 pages checked with no internal link errors; all 7
+- Documentation site: all pages checked with no internal link errors; all 7
   release-import validation tests passed.
 
 ## Physical boards
@@ -31,11 +31,23 @@ until the factory root password changed. Original device settings were restored.
 Raw captures, credentials and flash backups remain private. No hardware
 performance claim is inferred from a successful build.
 
+## After the first release
+
+- Windows and Linux programs: the desktop follows the terminal's size
+  (Windows Terminal maximised and restored); PuTTY resizing checked on a
+  board.
+- MQTT over TLS in the PC programs, built against mbedTLS v3.6.7: connected to
+  `test.mosquitto.org`; the release workflows fail a build without TLS.
+- `tdsh.exe` (TinyDesk Shell for Windows) in Windows Terminal: line editing,
+  history, Tab completion, `ifconfig`, `ping`, `exit`; its CTest smoke test
+  pipes a script through it. It needs only Windows system DLLs.
+
 ## Still to validate before a wider launch
 
 Full Editor save/reopen interaction on every board, live MQTT/Modbus devices,
 OTA updates, standalone Shell firmware on fresh boards, and independent
-installation reports remain release checks. The installer is local for now;
-installation from a public HTTPS site has not been tested.
+installation reports remain release checks. The installer is live at
+https://schikani.github.io/tinydesk-docs/install/; first installations from
+it on every advertised board still have to be recorded.
 
 See [the release checklist](RELEASE_CHECKLIST.md) before tagging a release.
