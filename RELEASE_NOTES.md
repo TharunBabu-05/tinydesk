@@ -45,7 +45,8 @@ the classic ESP32 Desktop edition uses 921600 baud, the Shell edition
 `TinyDesk`). Remote access is blocked until that password changes. Telnet
 starts disabled; enable it explicitly in Network only on a trusted network.
 It is unencrypted and root-only because it takes over the existing desktop.
-SSH provides a separate encrypted shell, not the windowed desktop.
+SSH provides a separate encrypted shell, not the windowed desktop (the 4 MB
+ESP32 Desktop build has no SSH server).
 
 Physical password recovery is unavailable after a Telnet takeover until the
 board reboots. Remote takeover is refused while physical recovery is active.
