@@ -7,6 +7,18 @@ embedded shell. MQTT and Modbus apps connect the desktop to real projects.
 This release is a developer preview: expect rough edges, and please report
 what breaks.
 
+## New in 0.1.1
+
+* **MQTT over TLS in the PC programs.** The Windows and Linux programs of
+  0.1.0 were built without mbedTLS and refused `mqtts://` ("not available in
+  this build"). They are now built against mbedTLS v3.6.7, and a release
+  build without TLS fails.
+* **TinyDesk Shell for Windows:** `tinydesk-shell-windows-x64.zip` has
+  `tdsh.exe`, the Shell edition as a native Windows program (TinyDesk Shell
+  0.1.1). The Desktop edition's Windows program uses the same Windows port.
+* Messages say "TinyDesk" throughout; the firmware is otherwise unchanged
+  from 0.1.0.
+
 ## Install
 
 * **ESP boards, from the browser:** <https://schikani.github.io/tinydesk-docs/install/>

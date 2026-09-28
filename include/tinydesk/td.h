@@ -22,7 +22,7 @@
  * terminals that support it act on it). At most TD_OSC52_MAX bytes. */
 void td_host_clipboard_set(const char *text, int len);
 
-#define TD_VERSION "0.1.0"
+#define TD_VERSION "0.1.1"
 #define TD_REPO_URL "https://github.com/schikani/tinydesk"
 #define TD_SHELL_REPO_URL "https://github.com/schikani/tinydesk-shell"
 
