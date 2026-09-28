@@ -2,8 +2,12 @@
 
 **A tiny board. A real desktop. Inside your terminal.**
 
-v0.1.0 · Developer preview. Build from source using the instructions below.
-The web installer is being tested locally; a public address will follow.
+v0.1.0 · Developer preview.
+
+**[Install it from the browser](https://schikani.github.io/tinydesk-docs/install/)**: flash an ESP32 (Chrome or
+Edge, no toolchain), or download the Windows and Linux programs. Then open
+the board in the **[web terminal](https://schikani.github.io/tinydesk-docs/console/)**, or in PuTTY.
+Full **[documentation](https://schikani.github.io/tinydesk-docs/)**. To build from source, see below.
 
 ![Four TinyDesk windows opened, dragged and resized side by side on a physical ESP32, then About](docs/media/desktop-demo-esp32.gif)
 
@@ -52,8 +56,10 @@ Terminal window. The core is portable C11; ports exist for ESP32 boards
 | PC | Linux, Windows with MinGW, or macOS | Compatible terminal; host simulator for development |
 
 [TinyDesk Shell](https://github.com/schikani/tinydesk-shell) also runs as
-standalone firmware or a POSIX host program. Release downloads will appear on
-the [Releases page](https://github.com/schikani/tinydesk/releases) after validation.
+standalone firmware or a POSIX host program. Every
+[release](https://github.com/schikani/tinydesk/releases) has the firmware
+images for both editions, the PC programs and `SHA256SUMS.txt`; the
+[web installer](https://schikani.github.io/tinydesk-docs/install/) uses the same files.
 
 ## First connection
 

@@ -41,7 +41,7 @@ another terminal. Avoid erasing flash as a routine update step.
 
 Use UTF-8, ANSI/VT cursor control, xterm mouse reporting and at least 80×25
 cells. PuTTY with UTF-8 and xterm mouse reporting is one option for serial;
-the web terminal on the documentation site (`console/`, Chrome or Edge) is
+the [web terminal](https://schikani.github.io/tinydesk-docs/console/) (Chrome or Edge) is
 another, with nothing to install.
 Classic ESP32 Desktop uses 921600 baud, 8 data bits, no parity, 1 stop bit,
 and no flow control. C6 uses built-in USB Serial/JTAG; its baud setting is
