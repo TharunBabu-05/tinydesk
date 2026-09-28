@@ -47,3 +47,9 @@ CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS=y
 # FreeRTOS kernel code (non-ISR functions) in flash: frees about 8 KB of
 # IRAM, which the RS-485 driver and the rest of the firmware need.
 CONFIG_FREERTOS_PLACE_FUNCTIONS_INTO_FLASH=y
+
+# SD card (sd mount): FAT with long file names in UTF-8, the name buffer on
+# the heap only while a call runs.
+CONFIG_FATFS_LFN_HEAP=y
+CONFIG_FATFS_MAX_LFN=255
+CONFIG_FATFS_API_ENCODING_UTF_8=y

@@ -9,4 +9,10 @@
 /* Filesystem operations rooted at `root` (the string is copied). */
 const td_fs_ops_t *td_fs_stdio(const char *root);
 
+/* Serve the folder `from` (a path below the root) from `to` while
+ * active() returns true: the ESP-IDF port shows a mounted SD card, which
+ * lives at /sd in the VFS, as the folder "sd" (/fs/sd). The folder itself
+ * cannot be removed or renamed through these operations. One redirect. */
+void td_fs_stdio_redirect(const char *from, const char *to, bool (*active)(void));
+
 #endif

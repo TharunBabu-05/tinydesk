@@ -283,6 +283,8 @@ static void fill_sysinfo(void)
     s_info.settings_load = settings_load;
     s_info.settings_save = settings_save;
     s_info.fs = td_fs_stdio(TDSH_MOUNT_POINT);
+    /* A mounted SD card (sd mount) shows up in Files as the folder "sd". */
+    td_fs_stdio_redirect(TDSH_MOUNT_POINT "/sd", "/sd", tdsh_sdcard_mounted);
     s_info.extra = "Shell:     TinyDesk Shell " TDSH_VERSION;
     td_set_sysinfo(&s_info);
 }
