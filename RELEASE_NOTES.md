@@ -7,17 +7,20 @@ embedded shell. MQTT and Modbus apps connect the desktop to real projects.
 This release is a developer preview: expect rough edges, and please report
 what breaks.
 
-## New in 0.1.1
+## New in 0.1.2
 
-* **MQTT over TLS in the PC programs.** The Windows and Linux programs of
-  0.1.0 were built without mbedTLS and refused `mqtts://` ("not available in
-  this build"). They are now built against mbedTLS v3.6.7, and a release
-  build without TLS fails.
-* **TinyDesk Shell for Windows:** `tinydesk-shell-windows-x64.zip` has
-  `tdsh.exe`, the Shell edition as a native Windows program (TinyDesk Shell
-  0.1.1). The Desktop edition's Windows program uses the same Windows port.
-* Messages say "TinyDesk" throughout; the firmware is otherwise unchanged
-  from 0.1.0.
+* **SD card:** with TinyDesk Shell 0.1.2's `sd` command a FAT card on the
+  SPI bus is `/sd` in the Terminal, FTP and SFTP, and the folder `sd` in
+  **Files**; long file names work. `sd mount` / `sd umount` (root), or
+  `board set sd.automount 1` to mount it at every boot. The release
+  firmware has no pins built in: set them once, for example
+  `board set sd.cs 22` when the card shares the W6100's `eth.*` bus, or
+  also `sd.miso`, `sd.mosi` and `sd.sclk`, then restart.
+* **`ping`** in the Terminal window shows the replies and the statistics
+  (only its first line appeared), and takes `-c <count>`.
+
+Also since 0.1.0: MQTT over TLS in the Windows and Linux programs (mbedTLS
+v3.6.7), and `tinydesk-shell-windows-x64.zip` with `tdsh.exe`.
 
 ## Install
 

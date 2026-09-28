@@ -42,6 +42,17 @@ performance claim is inferred from a successful build.
   history, Tab completion, `ifconfig`, `ping`, `exit`; its CTest smoke test
   pipes a script through it. It needs only Windows system DLLs.
 
+## 0.1.2
+
+- SD card on the ESP32-C6 (16 GB SDHC on the W6100's SPI bus): `hwtest sd`,
+  `sd mount`, write and read back a file with a long name, the card in Files
+  and the Editor, `hwtest sd` on the mounted card, `sd umount`, mounting at
+  boot (`sd.automount = 1`), and Ethernet pings with the card mounted and
+  after unmounting. Internal RAM free with the card, LAN and Wi-Fi in use:
+  140 KB. On the ESP32 with PSRAM and the 4 MB ESP32 (no card wired) `sd`
+  reports the pins as not configured.
+- `ping -c` and ping output in the Terminal window on all three boards.
+
 ## Still to validate before a wider launch
 
 Full Editor save/reopen interaction on every board, live MQTT/Modbus devices,
