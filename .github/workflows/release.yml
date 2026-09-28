@@ -16,6 +16,11 @@ on:
 permissions:
   contents: write
 
+env:
+  # The PC programs get MQTT over TLS from upstream mbedTLS, same 3.6 LTS
+  # branch as ESP-IDF 5.3.1; TD_REQUIRE_TLS stops a build without it.
+  MBEDTLS_TAG: v3.6.7
+
 jobs:
   checks:
     uses: ./.github/workflows/ci.yml
@@ -27,16 +32,30 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+      - name: mbedTLS for MQTT over TLS
+        shell: bash
+        run: |
+          git clone --quiet --depth 1 --branch "$MBEDTLS_TAG" --recurse-submodules --shallow-submodules \
+            https://github.com/Mbed-TLS/mbedtls.git ../mbedtls-src
+          echo "MBEDTLS_DIR=$(cd ../mbedtls-src && (pwd -W 2>/dev/null || pwd))" >> "$GITHUB_ENV"
       - name: Build the desktop and the shell
         run: |
           sudo apt-get install -y ninja-build
-          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DTD_REQUIRE_TLS=ON -DTD_MBEDTLS_DIR="$MBEDTLS_DIR"
           cmake --build build
           cmake -S third_party/tdsh -B build-shell -G Ninja -DTDSH_BUILD_HOST=ON -DCMAKE_BUILD_TYPE=Release
           cmake --build build-shell
           ctest --test-dir build --output-on-failure --no-tests=error
           ctest --test-dir build-shell --output-on-failure --no-tests=error
           strip build/tinydesk build-shell/tdsh_host
+      - name: MQTT over TLS is built in
+        shell: bash
+        run: |
+          mkdir -p sim && cd sim
+          ../build/tdsim wait=300 key=Enter wait=1500 'type=mqtt connect mqtts://127.0.0.1:1\r' wait=3000 shot > tls.txt
+          cat tls.txt
+          if grep -q "not available in this build" tls.txt; then echo "::error::built without MQTT over TLS"; exit 1; fi
+          grep -q "Connecting to mqtts://127.0.0.1:1" tls.txt
       - uses: actions/upload-artifact@v4
         with:
           name: host-linux
@@ -51,14 +70,29 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+      - name: mbedTLS for MQTT over TLS
+        shell: bash
+        run: |
+          git clone --quiet --depth 1 --branch "$MBEDTLS_TAG" --recurse-submodules --shallow-submodules \
+            https://github.com/Mbed-TLS/mbedtls.git ../mbedtls-src
+          echo "MBEDTLS_DIR=$(cd ../mbedtls-src && (pwd -W 2>/dev/null || pwd))" >> "$GITHUB_ENV"
       - name: Build the desktop (MinGW, static)
         shell: bash
         run: |
           choco install ninja -y
-          cmake -S . -B build -G Ninja -DCMAKE_C_COMPILER=gcc -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXE_LINKER_FLAGS=-static
+          cmake -S . -B build -G Ninja -DCMAKE_C_COMPILER=gcc -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXE_LINKER_FLAGS=-static \
+            -DTD_REQUIRE_TLS=ON -DTD_MBEDTLS_DIR="$MBEDTLS_DIR"
           cmake --build build
           ctest --test-dir build --output-on-failure --no-tests=error
           strip build/tinydesk.exe
+      - name: MQTT over TLS is built in
+        shell: bash
+        run: |
+          mkdir -p sim && cd sim
+          ../build/tdsim.exe wait=300 key=Enter wait=1500 'type=mqtt connect mqtts://127.0.0.1:1\r' wait=3000 shot > tls.txt
+          cat tls.txt
+          if grep -q "not available in this build" tls.txt; then echo "::error::built without MQTT over TLS"; exit 1; fi
+          grep -q "Connecting to mqtts://127.0.0.1:1" tls.txt
       - uses: actions/upload-artifact@v4
         with:
           name: host-windows

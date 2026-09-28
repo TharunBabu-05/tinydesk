@@ -64,6 +64,8 @@ endif()
 # or leave it empty to use ESP-IDF's copy when one is installed. Without it
 # the host build still works, only mqtts is refused.
 set(TD_MBEDTLS_DIR "" CACHE PATH "mbedTLS 3.x source tree (for MQTT over TLS)")
+# Release builds set this, so a program without TLS is never published.
+option(TD_REQUIRE_TLS "Stop when no mbedTLS source tree is found" OFF)
 if(NOT TD_MBEDTLS_DIR)
     foreach(cand "$ENV{IDF_PATH}/components/mbedtls/mbedtls"
                  "C:/Espressif/frameworks/esp-idf-v5.3.1/components/mbedtls/mbedtls"
@@ -87,6 +89,9 @@ if(TD_MBEDTLS_DIR)
     if(WIN32)
         target_link_libraries(tinydesk_proto PUBLIC crypt32 bcrypt)
     endif()
+elseif(TD_REQUIRE_TLS)
+    message(FATAL_ERROR "tinydesk: TD_REQUIRE_TLS is set but no mbedTLS source tree was found; "
+                        "set TD_MBEDTLS_DIR (for example a checkout of https://github.com/Mbed-TLS/mbedtls, v3.6.x)")
 else()
     message(STATUS "tinydesk: no mbedTLS found, MQTT over TLS disabled")
 endif()
