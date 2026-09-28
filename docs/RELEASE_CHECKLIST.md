@@ -37,7 +37,11 @@ https://schikani.github.io/tinydesk-docs/.
    prerelease**. Review and publish it.
 2. Record the tested submodule revision in the desktop repository and push.
    Confirm CI succeeds from a clean recursive checkout.
-3. Tag the tested revision. The release workflow calls CI, tests its release
+3. Set the version: `include/tinydesk/td.h` (`TD_VERSION`), `PROJECT_VER`
+   in `ports/esp32c6`, `ports/esp32` and `ports/esp32-4mb`, the README line,
+   `RELEASE_NOTES.md`, and the docs site's changelog and `api/core.md`. The
+   site's cover and installer take theirs from the release when the Pages
+   workflow runs. Then tag the tested revision. The release workflow calls CI, tests its release
    host binaries (MQTT over TLS must be built in), builds firmware, and
    creates a **draft prerelease**.
 4. Review the draft: version, all five board/edition images, manifests,
