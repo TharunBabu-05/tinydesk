@@ -53,6 +53,28 @@ performance claim is inferred from a successful build.
   reports the pins as not configured.
 - `ping -c` and ping output in the Terminal window on all three boards.
 
+## 0.1.3
+
+- Every app opened one after another through the Start menu, then the Task
+  Manager, on all three boards (scripted, reading the screen): ESP32 with
+  PSRAM 13 of 13 apps, 4 MB ESP32 12, ESP32-C6 11; the rest said *Too many
+  windows*; the Task Manager listed the tasks with everything open; no
+  restart. Before: the 4 MB ESP32 restarted when the Log Viewer opened after
+  seven apps. The PC build (tdsim): all 13.
+- nano in the Terminal window (80x25 boards, 160x50): Ctrl+C shows
+  "line 2/2, column 7" and the help lines are visible.
+- `passwd` names the factory password only while root has it (WROVER yes;
+  4 MB ESP32 and C6, whose root password was changed, no); `ssh start`
+  names it.
+- Official updates on the ESP32-C6: `ota official` and *Check for official
+  updates* reach the official site over HTTPS and report that it has no
+  feed yet (404, before the first release with one); the setting persists
+  (`ota notify`). Not tested on the board: finding a newer version and
+  installing it from a feed (Windows Firewall blocks the board from this
+  PC's test server).
+- Software Update on the 4 MB ESP32 shows the new explanation; internal RAM
+  free on the C6 with LAN, Wi-Fi and SD: 133.7 KB.
+
 ## Still to validate before a wider launch
 
 Full Editor save/reopen interaction on every board, live MQTT/Modbus devices,

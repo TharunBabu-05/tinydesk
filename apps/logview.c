@@ -127,6 +127,7 @@ static const char *get_item(td_widget_t *w, int index, int *fg, void *user)
 
 static void refresh(void)
 {
+    if (!s_list) return;             /* the window could not get its widgets */
     lock();
     uint32_t total = s_total;
     unlock();
@@ -158,6 +159,7 @@ static void on_close(td_window_t *win)
 {
     (void)win;
     s_win = NULL;
+    s_list = s_follow = s_count = NULL;
 }
 
 static void launch(void)

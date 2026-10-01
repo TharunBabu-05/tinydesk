@@ -58,10 +58,15 @@ idf_component_register(
 # ports/esp32/main/extram.lf) a maximised PuTTY fits (about 190x50 on a
 # 1920-pixel screen): 256x96 costs about 390 KB of screen buffers and 300 KB
 # of terminal with 200 lines of scrollback, out of 4 MB.
+#
+# The widget pool is shared by all windows (about 144 bytes a widget on the
+# ESP32; all apps open need about 115): 96 without PSRAM (14 KB of internal
+# RAM), the default 128 with it. A window that still does not fit, or gets
+# no timer, is closed with a message instead of opening with missing parts.
 if(CONFIG_SPIRAM)
-    set(TD_SCREEN_LIMITS TD_MAX_COLS=256 TD_MAX_ROWS=96 TD_VT_SCROLLBACK=200 TD_MAX_WIDGETS=64)
+    set(TD_SCREEN_LIMITS TD_MAX_COLS=256 TD_MAX_ROWS=96 TD_VT_SCROLLBACK=200)
 else()
-    set(TD_SCREEN_LIMITS TD_MAX_COLS=80 TD_MAX_ROWS=25 TD_VT_SCROLLBACK=12 TD_MAX_WIDGETS=40)
+    set(TD_SCREEN_LIMITS TD_MAX_COLS=80 TD_MAX_ROWS=25 TD_VT_SCROLLBACK=12 TD_MAX_WIDGETS=96)
 endif()
 target_compile_definitions(${COMPONENT_LIB} PUBLIC
     TD_HAVE_TLS

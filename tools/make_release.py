@@ -16,6 +16,9 @@ release:
     dist/tinydesk-<version>/
         tinydesk-<edition>-<version>-<board>-factory.bin   esptool, offset 0x0
         manifest-<edition>-<board>.json                   ESP Web Tools, one per board
+        tinydesk-<edition>-<version>-<board>-app.bin       the app alone, for updates
+        update-<edition>-<board>.json                     the update feed boards read
+                                                           (boards with two app slots)
         tinydesk-desktop-linux-x86_64.tar.gz ...          PC programs (--host-*)
         SHA256SUMS.txt, README.txt
 
@@ -153,6 +156,27 @@ def package_firmware(out, edition, title, version, builds):
             json.dump(manifest, f, indent=2)
         lines += ["  %s: %s" % (board, needs), "    esptool.py --chip %s write_flash 0x0 %s" % (chip, factory)]
         print("%-8s %-10s %s" % (edition, board, factory))
+        # Boards that update themselves (two app slots, an otadata partition)
+        # get the app image alone and an update feed: Software Update's
+        # "Check for official updates" reads it from the web installer's site.
+        if any("ota_data_initial" in os.path.basename(src) for _, src in parts):
+            app_src = next(src for off, src in parts if off == 0x10000)
+            app = "tinydesk-%s-%s-%s-app.bin" % (edition, version, board)
+            shutil.copy2(app_src, os.path.join(out, app))
+            feed = {
+                "name": title,
+                "edition": edition,
+                "board": board,
+                "version": version,
+                "date": time.strftime("%Y-%m-%d", time.gmtime()),
+                "image": "firmware/" + app,
+                "size": os.path.getsize(app_src),
+                "sha256": sha256(app_src),
+                "notes": "https://github.com/schikani/tinydesk/releases/tag/v%s" % version,
+            }
+            with open(os.path.join(out, "update-%s-%s.json" % (edition, board)), "w") as f:
+                json.dump(feed, f, indent=2)
+            print("%-8s %-10s %s (update feed)" % (edition, board, app))
     return lines
 
 
@@ -197,7 +221,7 @@ def install_into_site(release, site):
         p = os.path.join(dest, name)
         if name in ("firmware", "downloads", "desktop", "shell", "esp32c6", "esp32") and os.path.isdir(p):
             shutil.rmtree(p)
-        elif re.match(r"manifest.*\.json$|SHA256SUMS\.txt$|README\.txt$", name):
+        elif re.match(r"(manifest|update)-.*\.json$|SHA256SUMS\.txt$|README\.txt$", name):
             os.remove(p)
     os.makedirs(os.path.join(dest, "firmware"))
     os.makedirs(os.path.join(dest, "downloads"))
@@ -207,7 +231,7 @@ def install_into_site(release, site):
             shutil.copy2(src, os.path.join(dest, "firmware", name))
         elif name.endswith((".tar.gz", ".zip")):
             shutil.copy2(src, os.path.join(dest, "downloads", name))
-        elif name.startswith("manifest-") or name in ("SHA256SUMS.txt", "README.txt"):
+        elif name.startswith(("manifest-", "update-")) or name in ("SHA256SUMS.txt", "README.txt"):
             shutil.copy2(src, os.path.join(dest, name))
     print("installer updated: %s" % dest)
 

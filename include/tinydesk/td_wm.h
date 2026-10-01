@@ -86,6 +86,7 @@ struct td_window {
     int min_w, min_h;
     td_widget_t *widgets;    /* singly linked, in creation order */
     td_widget_t *focus;      /* focused widget or NULL */
+    bool incomplete;         /* a widget (TD_MAX_WIDGETS) or its tick timer (TD_MAX_TIMERS) did not fit */
     void (*on_draw)(td_window_t *win, int client_w, int client_h);
     bool (*on_event)(td_window_t *win, const td_event_t *ev);
     void (*on_close)(td_window_t *win);

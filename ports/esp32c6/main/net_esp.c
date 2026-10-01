@@ -187,7 +187,7 @@ static bool net_server_status(int which, int *port, int *clients)
 static bool net_server_set(int which, bool on)
 {
     if (on && !tdsh_remote_access_ready()) {
-        set_msg("%s", "Run passwd as root before enabling remote access");
+        set_msg("%s", "First run passwd in Terminal (old: " TDSH_FACTORY_ROOT_PASSWORD ")");
         return false;
     }
     if (s_busy) return false;
@@ -209,7 +209,7 @@ static void net_telnet_enable(bool on)
 {
     telnet_set_enabled(on);
     set_msg("%s", on && !telnet_enabled()
-        ? "Run passwd as root before enabling Telnet"
+        ? "Telnet: run passwd in Terminal (old: " TDSH_FACTORY_ROOT_PASSWORD ")"
         : "Telnet is unencrypted; root login only");
 }
 

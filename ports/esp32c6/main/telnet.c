@@ -307,7 +307,8 @@ bool telnet_enabled(void) { return s_enabled; }
 void telnet_set_enabled(bool on)
 {
     if (on && !tdsh_remote_access_ready()) {
-        ESP_LOGW(TAG, "Change the factory root password with passwd before enabling Telnet");
+        ESP_LOGW(TAG, "Change the factory root password with passwd before enabling Telnet (old password: "
+                 TDSH_FACTORY_ROOT_PASSWORD ")");
         return;
     }
     s_enabled = on;

@@ -29,7 +29,7 @@ static td_window_t *s_win;
 static td_widget_t *s_broker, *s_connect, *s_topic, *s_payload, *s_retain, *s_list;
 static ui_t *U;
 
-static const char *text_of(const td_widget_t *w) { return w ? w->text : ""; }
+static const char *text_of(const td_widget_t *w) { return td_widget_text(w); }
 
 static void note(const char *msg)
 {
@@ -305,7 +305,10 @@ static void launch(void)
         .tick_ms = 250,
     };
     U = calloc(1, sizeof(*U));
-    if (!U) return;
+    if (!U) {
+        td_msgbox("MQTT", "Not enough memory. Close a window, then try again.", "OK", NULL, NULL);
+        return;
+    }
     s_win = td_win_create(&d);
     if (!s_win) {
         free(U);

@@ -33,6 +33,7 @@ idf_component_register(
         esp_driver_uart
         app_update
         esp_https_ota
+        json
         esp_http_client
         bootloader_support
         mbedtls

@@ -48,7 +48,7 @@ typedef struct {
 
 static ui_t *U;
 
-static const char *text_of(const td_widget_t *w) { return w ? w->text : ""; }
+static const char *text_of(const td_widget_t *w) { return td_widget_text(w); }
 
 static void note(const char *msg)
 {
@@ -397,7 +397,10 @@ static void launch(void)
         .tick_ms = TICK_MS,
     };
     U = calloc(1, sizeof(*U));
-    if (!U) return;
+    if (!U) {
+        td_msgbox("Modbus", "Not enough memory. Close a window, then try again.", "OK", NULL, NULL);
+        return;
+    }
     s_win = td_win_create(&d);
     if (!s_win) {
         free(U);

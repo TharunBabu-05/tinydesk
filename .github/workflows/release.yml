@@ -155,5 +155,6 @@ jobs:
             dist/tinydesk-${{ env.VERSION }}/*.tar.gz
             dist/tinydesk-${{ env.VERSION }}/*.zip
             dist/tinydesk-${{ env.VERSION }}/manifest-*.json
+            dist/tinydesk-${{ env.VERSION }}/update-*.json
             dist/tinydesk-${{ env.VERSION }}/SHA256SUMS.txt
             dist/tinydesk-${{ env.VERSION }}/README.txt

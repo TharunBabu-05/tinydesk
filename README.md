@@ -2,7 +2,7 @@
 
 **A tiny board. A real desktop. Inside your terminal.**
 
-v0.1.2 · Developer preview.
+v0.1.3 · Developer preview.
 
 **[Install it from the browser](https://schikani.github.io/tinydesk-docs/install/)**: flash an ESP32 (Chrome or
 Edge, no toolchain), or download the Windows and Linux programs. Then open

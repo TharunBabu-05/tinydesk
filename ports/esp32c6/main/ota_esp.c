@@ -12,6 +12,13 @@
  * certificate bundle), or a .bin file on the device (copied with SFTP, FTP
  * or SMB). The work runs in a short-lived task; the Software Update app and
  * the shell poll its status.
+ *
+ * Official releases: every release puts a small update feed next to the web
+ * installer (update-desktop-<board>.json, from tools/make_release.py) with
+ * the version, date, size and the app image's path. check_official() reads
+ * it; the board key update.url points at another feed (self-hosting,
+ * tests). Whether to check daily, and the version the user was last told
+ * about, are kept in NVS (namespace td_update).
  */
 #include "ota_esp.h"
 
@@ -29,6 +36,9 @@
 #include "esp_ota_ops.h"
 #include "esp_system.h"
 #include "esp_timer.h"
+#include "cJSON.h"
+#include "nvs.h"
+#include "tdsh_board.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "freertos/task.h"
@@ -47,6 +57,19 @@ static bool s_check_only;
 static volatile bool s_cancel;
 static volatile bool s_busy;
 static int64_t s_start_us;
+
+/* The official update feed. */
+#define UPDATE_SITE "https://schikani.github.io/tinydesk-docs/install/"
+#if CONFIG_IDF_TARGET_ESP32C6
+#define UPDATE_BOARD "esp32c6"
+#else
+#define UPDATE_BOARD "esp32"          /* the classic ESP32 with PSRAM; the 4 MB one has no OTA */
+#endif
+#define FEED_MAX 2048
+enum { JOB_IMAGE, JOB_FEED };
+static int s_job;
+static bool s_quiet;                  /* a background feed check: status() stays */
+static td_ota_release_t s_rel;
 
 static void lock(void) { xSemaphoreTake(s_lock, portMAX_DELAY); }
 static void unlock(void) { xSemaphoreGive(s_lock); }
@@ -230,11 +253,142 @@ out:
 
 static bool is_url(const char *s) { return !strncmp(s, "http://", 7) || !strncmp(s, "https://", 8); }
 
+/* ---------------------------------------------------- official releases */
+
+static void feed_url(char *out, size_t cap)
+{
+    const char *u = tdsh_board_get("update.url");
+    if (u && is_url(u)) snprintf(out, cap, "%s", u);
+    else snprintf(out, cap, "%supdate-desktop-%s.json", UPDATE_SITE, UPDATE_BOARD);
+}
+
+/* "0.1.10" > "0.1.9": the first three numbers, anything after them ignored. */
+static bool version_newer(const char *a, const char *b)
+{
+    for (int i = 0; i < 3; i++) {
+        unsigned long x = strtoul(a, (char **)&a, 10), y = strtoul(b, (char **)&b, 10);
+        if (x != y) return x > y;
+        if (*a == '.') a++;
+        if (*b == '.') b++;
+    }
+    return false;
+}
+
+/* GET a small file into buf. Returns its length, or -1 with err set. */
+static int http_get_small(const char *url, char *buf, int cap, char *err, size_t err_cap)
+{
+    esp_http_client_config_t http = {
+        .url = url,
+        .timeout_ms = 15000,
+        .buffer_size = 2048,
+        .buffer_size_tx = 1024,
+    };
+    if (!strncmp(url, "https://", 8)) http.crt_bundle_attach = esp_crt_bundle_attach;
+    esp_http_client_handle_t c = esp_http_client_init(&http);
+    if (!c) {
+        snprintf(err, err_cap, "Not enough memory to connect.");
+        return -1;
+    }
+    int n = -1;
+    esp_err_t e = esp_http_client_open(c, 0);
+    if (e != ESP_OK) {
+        snprintf(err, err_cap, "Cannot reach the update server: %s", esp_err_to_name(e));
+        goto out;
+    }
+    esp_http_client_fetch_headers(c);
+    int code = esp_http_client_get_status_code(c);
+    if (code == 404) {
+        snprintf(err, err_cap, "No update information for this board on the server (404).");
+        goto out;
+    }
+    if (code != 200) {
+        snprintf(err, err_cap, "The update server answered HTTP %d.", code);
+        goto out;
+    }
+    n = 0;
+    for (;;) {
+        int r = esp_http_client_read(c, buf + n, cap - 1 - n);
+        if (r <= 0) break;
+        n += r;
+        if (n >= cap - 1) {
+            snprintf(err, err_cap, "The update information is too large.");
+            n = -1;
+            goto out;
+        }
+    }
+    buf[n] = '\0';
+out:
+    esp_http_client_close(c);
+    esp_http_client_cleanup(c);
+    return n;
+}
+
+static const char *json_str(const cJSON *o, const char *key)
+{
+    const cJSON *v = cJSON_GetObjectItemCaseSensitive(o, key);
+    return cJSON_IsString(v) && v->valuestring ? v->valuestring : "";
+}
+
+static void from_feed(void)
+{
+    char url[200], err[96] = "";
+    feed_url(url, sizeof(url));
+    td_ota_release_t r = { 0 };
+    char *buf = malloc(FEED_MAX);
+    int n = buf ? http_get_small(url, buf, FEED_MAX, err, sizeof(err)) : -1;
+    if (!buf) snprintf(err, sizeof(err), "Not enough memory to check.");
+    cJSON *j = n > 0 ? cJSON_Parse(buf) : NULL;
+    if (n > 0 && !j) snprintf(err, sizeof(err), "The update information is not valid JSON.");
+    const char *ver = j ? json_str(j, "version") : "";
+    const char *image = j ? json_str(j, "image") : "";
+    if (j && (!ver[0] || !image[0])) snprintf(err, sizeof(err), "The update information has no version or image.");
+    if (!err[0]) {
+        r.valid = true;
+        snprintf(r.version, sizeof(r.version), "%s", ver);
+        snprintf(r.date, sizeof(r.date), "%s", json_str(j, "date"));
+        snprintf(r.notes, sizeof(r.notes), "%s", json_str(j, "notes"));
+        const cJSON *size = cJSON_GetObjectItemCaseSensitive(j, "size");
+        r.size = cJSON_IsNumber(size) && size->valuedouble > 0 ? (uint32_t)size->valuedouble : 0;
+        if (is_url(image)) {
+            snprintf(r.url, sizeof(r.url), "%s", image);
+        } else {                               /* relative to the feed */
+            const char *slash = strrchr(url, '/');
+            int base = slash ? (int)(slash - url) + 1 : 0;
+            snprintf(r.url, sizeof(r.url), "%.*s%s", base, url, image);
+        }
+        r.newer = version_newer(r.version, esp_app_get_description()->version);
+    }
+    cJSON_Delete(j);
+    free(buf);
+
+    const char *mine = esp_app_get_description()->version;
+    lock();
+    r.checks = s_rel.checks + 1;
+    snprintf(r.error, sizeof(r.error), "%s", err);
+    if (!r.valid && s_rel.valid) {          /* keep what was known; note the failure */
+        td_ota_release_t keep = s_rel;
+        snprintf(keep.error, sizeof(keep.error), "%s", err);
+        keep.checks = r.checks;
+        r = keep;
+    }
+    s_rel = r;
+    unlock();
+    if (s_quiet) {
+        ESP_LOGI(TAG, "official release check: %s", err[0] ? err : r.version);
+        return;
+    }
+    if (err[0]) set_state(TD_OTA_FAILED, "%s", err);
+    else if (r.newer) set_state(TD_OTA_IDLE, "TinyDesk %s is available (installed: %s). Install it?", r.version, mine);
+    else if (!strcmp(r.version, mine)) set_state(TD_OTA_IDLE, "TinyDesk %s, the newest release, is installed.", mine);
+    else set_state(TD_OTA_IDLE, "Installed %s is newer than the newest release (%s).", mine, r.version);
+}
+
 static void ota_task(void *arg)
 {
     (void)arg;
     s_start_us = esp_timer_get_time();
-    if (is_url(s_source)) from_url();
+    if (s_job == JOB_FEED) from_feed();
+    else if (is_url(s_source)) from_url();
     else from_file();
     s_busy = false;
     vTaskDelete(NULL);
@@ -269,6 +423,7 @@ static void ota_info(td_ota_info_t *out)
 static bool ota_start(const char *source, bool check_only)
 {
     if (s_busy || !source || !source[0]) return false;
+    s_job = JOB_IMAGE;
     snprintf(s_source, sizeof(s_source), "%s", source);
     s_check_only = check_only;
     s_cancel = false;
@@ -319,8 +474,88 @@ static bool ota_roll_back(void)
     return true;
 }
 
+static bool ota_check_official(bool quiet)
+{
+    if (s_busy) return false;
+    s_job = JOB_FEED;
+    s_quiet = quiet;
+    if (!quiet) {
+        lock();
+        memset(&s_st, 0, sizeof(s_st));
+        s_st.state = TD_OTA_CHECKING;
+        s_st.percent = -1;
+        snprintf(s_st.message, sizeof(s_st.message), "Looking up the newest official release...");
+        unlock();
+    }
+    s_busy = true;
+    if (xTaskCreate(ota_task, "td_ota", URL_TASK_STACK, NULL, 4, NULL) != pdPASS) {
+        s_busy = false;
+        if (!quiet) set_state(TD_OTA_FAILED, "Not enough memory to check.");
+        return false;
+    }
+    return true;
+}
+
+static void ota_official(td_ota_release_t *out)
+{
+    lock();
+    *out = s_rel;
+    unlock();
+}
+
+/* NVS namespace td_update: auto (u8, default 1), told (the last version notified). */
+static bool ota_auto_check(void)
+{
+    nvs_handle_t h;
+    uint8_t v = 1;
+    if (nvs_open("td_update", NVS_READONLY, &h) == ESP_OK) {
+        nvs_get_u8(h, "auto", &v);
+        nvs_close(h);
+    }
+    return v != 0;
+}
+
+static void ota_set_auto_check(bool on)
+{
+    nvs_handle_t h;
+    if (nvs_open("td_update", NVS_READWRITE, &h) != ESP_OK) return;
+    nvs_set_u8(h, "auto", on ? 1 : 0);
+    nvs_commit(h);
+    nvs_close(h);
+}
+
+static void ota_notified(char *out, int cap)
+{
+    nvs_handle_t h;
+    out[0] = '\0';
+    if (nvs_open("td_update", NVS_READONLY, &h) != ESP_OK) return;
+    size_t n = (size_t)cap;
+    if (nvs_get_str(h, "told", out, &n) != ESP_OK) out[0] = '\0';
+    nvs_close(h);
+}
+
+static void ota_set_notified(const char *version)
+{
+    nvs_handle_t h;
+    if (nvs_open("td_update", NVS_READWRITE, &h) != ESP_OK) return;
+    nvs_set_str(h, "told", version ? version : "");
+    nvs_commit(h);
+    nvs_close(h);
+}
+
 static const td_ota_ops_t s_ops = {
-    ota_info, ota_start, ota_status, ota_cancel, ota_restart, ota_roll_back,
+    .info = ota_info,
+    .start = ota_start,
+    .status = ota_status,
+    .cancel = ota_cancel,
+    .restart = ota_restart,
+    .roll_back = ota_roll_back,
+    .check_official = ota_check_official,
+    .official = ota_official,
+    .auto_check = ota_auto_check,
+    .set_auto_check = ota_set_auto_check,
+    .notified = ota_notified,
+    .set_notified = ota_set_notified,
 };
 
 /* A restart we were asked for (Start > Exit, `reboot`, Restart now) means
@@ -411,6 +646,35 @@ static int cmd_ota(tdsh_session_t *session, int argc, char **argv)
         }
         return wait_job();
     }
+    if (!strcmp(op, "official") && argc == 2) {
+        if (!ota_check_official(false)) {
+            printf("ota: an update is already running\n");
+            return 1;
+        }
+        int rc = wait_job();
+        td_ota_release_t r;
+        ota_official(&r);
+        if (rc == 0 && r.valid) {
+            printf("Newest:    TinyDesk %s%s%s, %u KB\n", r.version, r.date[0] ? " of " : "", r.date,
+                   (unsigned)(r.size / 1024));
+            printf("Image:     %s\n", r.url);
+            if (r.notes[0]) printf("Notes:     %s\n", r.notes);
+            if (r.newer) printf("Install:   ota install %s\n", r.url);
+        }
+        return rc;
+    }
+    if (!strcmp(op, "notify")) {
+        if (argc == 3 && (!strcmp(argv[2], "on") || !strcmp(argv[2], "off"))) {
+            bool on = !strcmp(argv[2], "on");
+            ota_set_auto_check(on);
+            if (on) ota_set_notified("");      /* tell about the newest release again */
+        } else if (argc != 2) {
+            printf("usage: ota notify [on|off]\n");
+            return 2;
+        }
+        printf("Daily check for official updates: %s\n", ota_auto_check() ? "on" : "off");
+        return 0;
+    }
     if (!strcmp(op, "cancel")) {
         ota_cancel();
         printf("Cancelling...\n");
@@ -433,6 +697,8 @@ static int cmd_ota(tdsh_session_t *session, int argc, char **argv)
     }
     printf("usage:\n"
            "  ota status                    installed version, slots, last result\n"
+           "  ota official                  look up the newest official release\n"
+           "  ota notify [on|off]           daily check and notice (on: tell again)\n"
            "  ota check <url|file>          show the version of an update\n"
            "  ota install <url|file>        install it (then: ota restart)\n"
            "  ota cancel | restart | rollback\n"
@@ -441,7 +707,7 @@ static int cmd_ota(tdsh_session_t *session, int argc, char **argv)
 }
 
 static const tdsh_command_t s_cmd = {
-    "ota", "ota <status|check|install|cancel|restart|rollback> ...", "Firmware update (OTA)", cmd_ota,
+    "ota", "ota <status|official|notify|check|install|cancel|restart|rollback> ...", "Firmware update (OTA)", cmd_ota,
     TDSH_CMD_ROOT_ONLY,
 };
 

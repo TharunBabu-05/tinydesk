@@ -235,13 +235,23 @@ static void clamp_rect(td_window_t *w)
     r->y = clamp(r->y, 0, desk - 1);
 }
 
+/* Set when an ordinary window was refused because the pool is (nearly) full. */
+static bool s_win_refused;
+
 td_window_t *td_win_create(const td_window_desc_t *desc)
 {
-    int idx = -1;
+    int idx = -1, free_slots = 0;
     for (int i = 0; i < TD_MAX_WINDOWS; i++) {
-        if (!s_wins[i].used) { idx = i; break; }
+        if (s_wins[i].used) continue;
+        if (idx < 0) idx = i;
+        free_slots++;
     }
-    if (idx < 0) return NULL;
+    /* The last free slot is kept for a modal dialog, so "too many windows"
+     * can still be said when the pool is full. */
+    if (idx < 0 || (free_slots <= 1 && !(desc->flags & TD_WIN_MODAL))) {
+        s_win_refused = true;
+        return NULL;
+    }
 
     td_window_t *w = &s_wins[idx];
     memset(w, 0, sizeof(*w));
@@ -272,8 +282,10 @@ td_window_t *td_win_create(const td_window_desc_t *desc)
     w->restore_rect = w->rect;
     clamp_rect(w);
 
-    if (w->on_tick && desc->tick_ms > 0)
+    if (w->on_tick && desc->tick_ms > 0) {
         w->timer_id = td_timer_start(desc->tick_ms, true, tick_cb, w, td_millis());
+        if (w->timer_id < 0) w->incomplete = true;   /* it would never update */
+    }
 
     order_push(idx);
     s_menu_open = false;
@@ -460,13 +472,29 @@ const td_app_t *td_app_get(int index)
     return (index >= 0 && index < s_app_count) ? s_apps[index] : NULL;
 }
 
-/* Windows an app opens while launching get its glyph on the taskbar. */
+/* Windows an app opens while launching get its glyph on the taskbar. A
+ * window whose widgets did not all fit in the shared pool (TD_MAX_WIDGETS),
+ * or that got no tick timer (TD_MAX_TIMERS), would be missing parts or never
+ * update: it is closed again and the user is told why, as when no window
+ * slot was left for it (TD_MAX_WINDOWS). */
 static void launch_app(const td_app_t *app)
 {
+    bool was_open[TD_MAX_WINDOWS];
+    for (int i = 0; i < TD_MAX_WINDOWS; i++) was_open[i] = s_wins[i].used;
+    s_win_refused = false;
     const char *prev = s_launch_icon;
     s_launch_icon = app->icon;
     app->launch();
     s_launch_icon = prev;
+
+    bool closed = s_win_refused;     /* no window slot left for it */
+    for (int i = 0; i < TD_MAX_WINDOWS; i++) {
+        if (s_wins[i].used && !was_open[i] && s_wins[i].incomplete) {
+            td_win_close(&s_wins[i]);
+            closed = true;
+        }
+    }
+    if (closed) td_msgbox(app->name, "Too many windows are open. Close one, then try again.", "OK", NULL, NULL);
 }
 
 bool td_app_launch(const char *name)

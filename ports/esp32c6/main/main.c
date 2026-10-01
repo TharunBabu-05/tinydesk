@@ -70,30 +70,45 @@ static int task_count(void) { return (int)uxTaskGetNumberOfTasks(); }
 extern const char s_board_builtin[] asm("_binary_board_builtin_conf_start");
 
 #if CONFIG_FREERTOS_USE_TRACE_FACILITY && CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS
-/* The previous sample, to turn run-time counters into CPU shares. It is
- * allocated on the first call (when the Task Manager opens). */
+/* The previous sample, to turn run-time counters into CPU shares. The
+ * buffers are allocated on the first call (when the Task Manager opens) and
+ * kept, growing only when there are more tasks: a refresh then needs no
+ * memory, so the list does not go blank when RAM is short. */
 typedef struct {
     TaskHandle_t handle;
     configRUN_TIME_COUNTER_TYPE run;
 } task_sample_t;
-static task_sample_t *s_prev;
+static task_sample_t *s_prev, *s_now;
+static TaskStatus_t *s_status;
+static UBaseType_t s_task_cap;
 static int s_prev_count;
 static configRUN_TIME_COUNTER_TYPE s_prev_total;
 
+static bool grow_task_buffers(UBaseType_t cap)
+{
+    if (cap <= s_task_cap) return true;
+    TaskStatus_t *st = realloc(s_status, cap * sizeof(*st));
+    if (!st) return false;
+    s_status = st;
+    task_sample_t *prev = realloc(s_prev, cap * sizeof(*prev));
+    if (!prev) return false;
+    s_prev = prev;
+    task_sample_t *now = realloc(s_now, cap * sizeof(*now));
+    if (!now) return false;
+    s_now = now;
+    s_task_cap = cap;
+    return true;
+}
+
 static int list_tasks(td_task_info_t *out, int max)
 {
-    UBaseType_t cap = uxTaskGetNumberOfTasks() + 4;
-    TaskStatus_t *st = malloc(cap * sizeof(*st));
-    task_sample_t *now = malloc(cap * sizeof(*now));
-    if (!st || !now) {
-        free(st);
-        free(now);
-        return 0;
-    }
+    if (!grow_task_buffers(uxTaskGetNumberOfTasks() + 4)) return -1;
+    TaskStatus_t *st = s_status;
+    task_sample_t *now = s_now;
     configRUN_TIME_COUNTER_TYPE total = 0;
-    UBaseType_t n = uxTaskGetSystemState(st, cap, &total);
+    UBaseType_t n = uxTaskGetSystemState(st, s_task_cap, &total);
     configRUN_TIME_COUNTER_TYPE elapsed = total - s_prev_total;   /* wraps fine */
-    bool have_prev = s_prev != NULL && elapsed > 0;
+    bool have_prev = s_prev_count > 0 && elapsed > 0;
     int k = 0;
     for (UBaseType_t i = 0; i < n; i++) {
         now[i].handle = st[i].xHandle;
@@ -121,11 +136,10 @@ static int list_tasks(td_task_info_t *out, int max)
             break;
         }
     }
-    free(s_prev);
+    s_now = s_prev;                 /* swap: this sample becomes the previous one */
     s_prev = now;
     s_prev_count = (int)n;
     s_prev_total = total;
-    free(st);
     return k;
 }
 #endif
@@ -277,7 +291,18 @@ static void fill_sysinfo(void)
     s_info.set_tz = set_tz;
     s_info.net = net_esp_ops();
     /* Updates need a second app slot (not on the 4 MB ESP32 layout). */
-    if (esp_ota_get_next_update_partition(NULL)) s_info.ota = ota_esp_ops();
+    if (esp_ota_get_next_update_partition(NULL)) {
+        s_info.ota = ota_esp_ops();
+    } else {
+        s_info.no_ota_text =
+            "This board cannot update itself: its flash has one app slot\n"
+            "(4 MB layout), and an update needs a second one to download into.\n"
+            "\n"
+            "Install the new release with the web installer instead:\n"
+            "  https://schikani.github.io/tinydesk-docs/install/\n"
+            "Leave \"Erase device\" off: your files stay; users, Wi-Fi networks\n"
+            "and passwords start fresh.";
+    }
     s_info.user_exists = tdsh_user_exists;
     s_info.authenticate = tdsh_user_authenticate;
     s_info.settings_load = settings_load;

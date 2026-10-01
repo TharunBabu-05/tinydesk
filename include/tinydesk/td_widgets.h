@@ -49,7 +49,9 @@ struct td_widget {
     td_rect_t rect;          /* relative to the client area (see above) */
     td_window_t *win;
     td_widget_t *next;
-    char text[TD_TEXT_MAX];  /* label / caption / textbox contents */
+    char text[TD_TEXT_MAX];  /* label / caption / textbox contents (see td_widget_text) */
+    char *ext;               /* textbox: a longer buffer of the app's own, or NULL */
+    int ext_cap;             /* its size in bytes */
     int value;               /* checked, percent, selected item, cursor */
     int scroll;              /* first visible item / column */
     int count;               /* list item count */
@@ -94,6 +96,15 @@ td_widget_t *td_scrollbar(td_window_t *win, int x, int y, int height, td_widget_
 
 /* Common setters. */
 void td_widget_set_text(td_widget_t *w, const char *text);
+
+/* The widget's text ("" for NULL): use it instead of w->text, which is
+ * empty for a text box with its own buffer. */
+const char *td_widget_text(const td_widget_t *w);
+
+/* Give a text box a buffer of the app's own, longer than TD_TEXT_MAX (for
+ * a URL, say). The buffer must live as long as the window; its contents
+ * become the text, and maxlen becomes cap - 1. */
+void td_textbox_set_buffer(td_widget_t *w, char *buf, int cap);
 void td_widget_printf(td_widget_t *w, const char *fmt, ...);
 void td_widget_set_align(td_widget_t *w, td_align_t align);
 void td_widget_set_color(td_widget_t *w, int fg, int bg);

@@ -7,20 +7,37 @@ embedded shell. MQTT and Modbus apps connect the desktop to real projects.
 This release is a developer preview: expect rough edges, and please report
 what breaks.
 
-## New in 0.1.2
+## New in 0.1.3
 
-* **SD card:** with TinyDesk Shell 0.1.2's `sd` command a FAT card on the
-  SPI bus is `/sd` in the Terminal, FTP and SFTP, and the folder `sd` in
-  **Files**; long file names work. `sd mount` / `sd umount` (root), or
-  `board set sd.automount 1` to mount it at every boot. The release
-  firmware has no pins built in: set them once, for example
-  `board set sd.cs 22` when the card shares the W6100's `eth.*` bus, or
-  also `sd.miso`, `sd.mosi` and `sd.sclk`, then restart.
-* **`ping`** in the Terminal window shows the replies and the statistics
-  (only its first line appeared), and takes `-c <count>`.
+* **Official updates:** Software Update has *Check for official updates*
+  (it fills in the newest release's image and shows its version, date and
+  size; *Install* installs it) and *Check daily and notify me*, which tells
+  you once when a newer version is out. Shell: `ota official`. From this
+  release on, each release carries what the ESP32-C6 and ESP32 (PSRAM)
+  boards need for it; the 4 MB ESP32 cannot update over the air.
 
-Also since 0.1.0: MQTT over TLS in the Windows and Linux programs (mbedTLS
-v3.6.7), and `tinydesk-shell-windows-x64.zip` with `tdsh.exe`.
+Fixes for problems reported on an ESP32-2432S028R (4 MB, no PSRAM):
+
+* **No more restart with many windows open.** Opening the Log Viewer (or
+  another app) with several windows open could restart a board without
+  PSRAM. Now an app that does not fit says *Too many windows are open.
+  Close one, then try again.*, and more fits: 16 windows, 96 widgets on
+  boards without PSRAM (was 40), 128 with it. With every app opened one
+  after another: all 13 fit on the ESP32 with PSRAM, 12 on the 4 MB ESP32,
+  11 on the ESP32-C6.
+* **Task Manager** lists the tasks with many windows open (it could stay
+  empty); the Task Manager, MQTT and Modbus say *Not enough memory* instead
+  of not opening.
+* **nano** in the Terminal window shows its status line and help (Ctrl+C:
+  the cursor position); it assumed an 80x24 screen.
+* **The factory password is named:** `passwd` says the old password is
+  `TinyDesk` (capital T and D) while root still has it, and the Network app
+  and `ssh start` say so when they keep remote access off.
+* **Software Update on the 4 MB ESP32** explains that it cannot update over
+  the air and how to update instead.
+
+Also since 0.1.0: the SD card at `/sd` and in Files (0.1.2), `ping -c`,
+MQTT over TLS in the PC programs, and `tdsh.exe` for Windows.
 
 ## Install
 

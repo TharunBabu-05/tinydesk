@@ -114,6 +114,19 @@ typedef struct {
     char message[96];
 } td_ota_status_t;
 
+/* The newest official release, as the port's update feed describes it. */
+typedef struct {
+    bool valid;                /* a check succeeded */
+    bool newer;                /* and it is newer than the installed version */
+    char version[24];
+    char date[12];             /* "2026-10-02" */
+    char url[200];             /* its app image: give it to start() */
+    uint32_t size;             /* bytes, 0 unknown */
+    char notes[128];           /* the release page */
+    char error[96];            /* why the last check failed, "" when it did not */
+    uint32_t checks;           /* finished checks so far (to see a new result) */
+} td_ota_release_t;
+
 /* Firmware updates (optional). Sources are an http(s):// URL or a real
  * file path; the work happens in the background. */
 typedef struct {
@@ -123,6 +136,18 @@ typedef struct {
     void (*cancel)(void);
     void (*restart)(void);
     bool (*roll_back)(void);   /* boot the other slot's version */
+
+    /* Official releases (optional, NULL: none). check_official looks up the
+     * newest one in the background; quiet keeps status() as it is (a check
+     * of its own, not one the user asked for). The result: official(). */
+    bool (*check_official)(bool quiet);
+    void (*official)(td_ota_release_t *out);
+    /* "Check daily and notify me", kept by the port (default on). */
+    bool (*auto_check)(void);
+    void (*set_auto_check)(bool on);
+    /* The version the user was last told about, so each is told once. */
+    void (*notified)(char *out, int cap);
+    void (*set_notified)(const char *version);
 } td_ota_ops_t;
 
 /* One system task (thread), for the Task Manager. */
@@ -151,9 +176,10 @@ typedef struct {
     uint32_t (*psram_total)(void);
     int (*task_count)(void);
     int (*cpu_mhz)(void);
-    /* Optional: fill up to max tasks, return how many. CPU shares are
-     * measured between calls (the first call has none). Tasks whose name
-     * starts with "IDLE" are the idle time. */
+    /* Optional: fill up to max tasks, return how many, or -1 when they
+     * cannot be listed now (out of memory). CPU shares are measured between
+     * calls (the first call has none). Tasks whose name starts with "IDLE"
+     * are the idle time. */
     int (*tasks)(td_task_info_t *out, int max);
 
     /* The system clock (optional): seconds since 1970-01-01 UTC; false
@@ -175,6 +201,9 @@ typedef struct {
 
     const td_net_ops_t *net;
     const td_ota_ops_t *ota;   /* NULL: no updates on this platform */
+    /* With ota NULL (optional): why, and how to update instead; lines
+     * separated by '\n'. Software Update shows it. */
+    const char *no_ota_text;
 
     /* User accounts (optional; without them the desktop is root's). */
     bool (*user_exists)(const char *user);

@@ -303,6 +303,7 @@ static void empty_menu_chosen(int item, void *user)
 
 static void context_menu(td_window_t *win, const td_event_t *ev)
 {
+    if (!s_list) return;
     td_rect_t c = td_win_client(win);
     td_rect_t lr = td_widget_rect(s_list);
     int ax = c.x + ev->x, ay = c.y + ev->y;       /* screen position */
@@ -341,6 +342,7 @@ static bool on_event(td_window_t *win, const td_event_t *ev)
 /* Entry under a client-area position, or -1. */
 static int row_at(td_window_t *win, int x, int y)
 {
+    if (!s_list) return -1;
     td_rect_t c = td_win_client(win);
     td_rect_t lr = td_widget_rect(s_list);
     int ax = c.x + x, ay = c.y + y;

@@ -99,13 +99,13 @@
 
 /* Window manager pools. */
 #ifndef TD_MAX_WINDOWS
-#define TD_MAX_WINDOWS 12
+#define TD_MAX_WINDOWS 16            /* the last one is kept for a message box */
 #endif
 #ifndef TD_MAX_WIDGETS
-#define TD_MAX_WIDGETS 64
+#define TD_MAX_WIDGETS 128           /* all windows together; the last 4 for a message box */
 #endif
 #ifndef TD_MAX_TIMERS
-#define TD_MAX_TIMERS 16
+#define TD_MAX_TIMERS 24             /* one per window with on_tick, plus the desktop's own */
 #endif
 #ifndef TD_MAX_APPS
 #define TD_MAX_APPS 16

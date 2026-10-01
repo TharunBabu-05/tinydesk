@@ -21,6 +21,7 @@ static td_widget_t *s_apps, *s_tasks;
 typedef struct {
     td_task_info_t tasks[TASKS_MAX];
     int task_count;
+    bool tasks_failed;          /* the port could not list them (memory) */
     int cpu_tenths;             /* whole system, -1 unknown */
     td_window_t *wins[WINS_MAX];
     int win_count;
@@ -57,6 +58,8 @@ static void refresh(void)
     td_list_set_count(s_apps, T->win_count);
 
     T->task_count = si->tasks ? si->tasks(T->tasks, TASKS_MAX) : 0;
+    T->tasks_failed = T->task_count < 0;
+    if (T->task_count < 0) T->task_count = 0;
     T->cpu_tenths = -1;
     if (T->task_count > 0) {
         int idle = 0;
@@ -166,7 +169,9 @@ static void on_draw(td_window_t *win, int w, int h)
 
     int ty = 4 + APPS_ROWS;
     td_text(0, ty, "System tasks", t->win_fg, t->win_bg, TD_BOLD);
-    if (si->tasks) {
+    if (si->tasks && T->tasks_failed) {
+        td_textn(0, ty + 1, " Not enough memory to list the tasks: close a window.", w, t->accent, t->win_bg, 0);
+    } else if (si->tasks) {
         snprintf(line, sizeof(line), "(%d, busiest first)", T->task_count);
         td_text(13, ty, line, t->dim, t->win_bg, 0);
         td_textn(0, ty + 1, " Name             State     Prio  Core  CPU %  Stack free", w, t->dim, t->win_bg, 0);
@@ -207,7 +212,10 @@ static void launch(void)
         return;
     }
     T = calloc(1, sizeof(*T));
-    if (!T) return;
+    if (!T) {
+        td_msgbox("Task Manager", "Not enough memory. Close a window, then try again.", "OK", NULL, NULL);
+        return;
+    }
     int ty = 4 + APPS_ROWS;
     td_window_desc_t d = {
         .title = "Task Manager",

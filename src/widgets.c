@@ -12,6 +12,10 @@
 #include "tinydesk/td.h"
 
 static td_widget_t s_pool[TD_MAX_WIDGETS];
+
+/* A text box may keep its text in a buffer of the app's own (td_textbox_set_buffer). */
+#define TXT(w) ((w)->ext ? (w)->ext : (w)->text)
+#define CAP(w) ((w)->ext ? (w)->ext_cap : (int)sizeof((w)->text))
 static td_widget_t *s_pressed;    /* button or scrollbar held by the mouse */
 
 /* ------------------------------------------------------------ helpers */
@@ -51,9 +55,21 @@ td_rect_t td_widget_rect(const td_widget_t *w)
     return r;
 }
 
+/* Widgets only a message box may use, so it can always say why another
+ * window did not open. */
+#define DIALOG_RESERVE 4
+
 static td_widget_t *alloc_widget(td_window_t *win, td_widget_type_t type, td_rect_t rect, bool focusable)
 {
     if (!td_win_is_open(win)) return NULL;
+    if (!(win->flags & TD_WIN_MODAL)) {
+        int free_count = 0;
+        for (int i = 0; i < TD_MAX_WIDGETS; i++) free_count += !s_pool[i].used;
+        if (free_count <= DIALOG_RESERVE) {
+            win->incomplete = true;
+            return NULL;
+        }
+    }
     for (int i = 0; i < TD_MAX_WIDGETS; i++) {
         td_widget_t *w = &s_pool[i];
         if (w->used) continue;
@@ -75,6 +91,7 @@ static td_widget_t *alloc_widget(td_window_t *win, td_widget_type_t type, td_rec
         td_wm_invalidate();
         return w;
     }
+    win->incomplete = true;         /* the pool is shared by every window */
     return NULL;
 }
 
@@ -167,12 +184,29 @@ td_widget_t *td_scrollbar(td_window_t *win, int x, int y, int height, td_widget_
 void td_widget_set_text(td_widget_t *w, const char *text)
 {
     if (!w) return;
-    snprintf(w->text, sizeof(w->text), "%.*s", (int)sizeof(w->text) - 1, text ? text : "");   /* cut to fit */
+    snprintf(TXT(w), (size_t)CAP(w), "%.*s", CAP(w) - 1, text ? text : "");   /* cut to fit */
     if (w->type == TD_WT_TEXTBOX) {
-        w->value = (int)strlen(w->text);   /* cursor to the end */
+        w->value = (int)strlen(TXT(w));   /* cursor to the end */
         w->scroll = 0;
     }
-    if (w->type == TD_WT_BUTTON) w->rect.w = td_utf8_len(w->text) + 4;   /* "[ caption ]" */
+    if (w->type == TD_WT_BUTTON) w->rect.w = td_utf8_len(TXT(w)) + 4;   /* "[ caption ]" */
+    td_wm_invalidate();
+}
+
+const char *td_widget_text(const td_widget_t *w)
+{
+    return w ? TXT(w) : "";
+}
+
+void td_textbox_set_buffer(td_widget_t *w, char *buf, int cap)
+{
+    if (!w || w->type != TD_WT_TEXTBOX || !buf || cap < 2) return;
+    buf[cap - 1] = '\0';
+    w->ext = buf;
+    w->ext_cap = cap;
+    w->maxlen = cap - 1;
+    w->value = (int)strlen(buf);
+    w->scroll = 0;
     td_wm_invalidate();
 }
 
@@ -184,7 +218,7 @@ void td_widget_printf(td_widget_t *w, const char *fmt, ...)
     va_start(ap, fmt);
     vsnprintf(buf, sizeof(buf), fmt, ap);
     va_end(ap);
-    if (strcmp(buf, w->text) != 0) td_widget_set_text(w, buf);
+    if (strcmp(buf, TXT(w)) != 0) td_widget_set_text(w, buf);
 }
 
 void td_widget_set_align(td_widget_t *w, td_align_t align)
@@ -280,13 +314,13 @@ static void draw_label(const td_widget_t *w, td_rect_t r, const td_theme_t *t)
 {
     uint8_t fg = pick(w->fg, t->win_fg);
     uint8_t bg = pick(w->bg, t->win_bg);
-    int len = td_utf8_len(w->text);
+    int len = td_utf8_len(TXT(w));
     int x = r.x;
     if (w->align == TD_ALIGN_CENTER) x += (r.w - len) / 2;
     else if (w->align == TD_ALIGN_RIGHT) x += r.w - len;
     if (x < r.x) x = r.x;
     td_fill(r, ' ', fg, bg);
-    td_textn(x, r.y, w->text, r.x + r.w - x, fg, bg, 0);
+    td_textn(x, r.y, TXT(w), r.x + r.w - x, fg, bg, 0);
 }
 
 /* True when the mouse is over the widget and nothing covers it there. */
@@ -306,7 +340,7 @@ static void draw_button(const td_widget_t *w, td_rect_t r, bool focused, const t
     uint8_t attr = w->pressed ? TD_REVERSE : (focused ? TD_BOLD : 0);
     td_fill(r, ' ', fg, bg);
     td_putc(r.x, r.y, '[', fg, bg, attr);
-    td_textn(r.x + 2, r.y, w->text, r.w - 4, fg, bg, attr);
+    td_textn(r.x + 2, r.y, TXT(w), r.w - 4, fg, bg, attr);
     td_putc(r.x + r.w - 1, r.y, ']', fg, bg, attr);
 }
 
@@ -317,7 +351,7 @@ static void draw_checkbox(const td_widget_t *w, td_rect_t r, bool focused, const
     td_text(r.x, r.y, w->value ? "[x]" : "[ ]", fg, bg, 0);
     uint8_t cfg = focused ? t->focus_fg : fg;
     uint8_t cbg = focused ? t->focus_bg : bg;
-    td_textn(r.x + 4, r.y, w->text, r.w - 4, cfg, cbg, 0);
+    td_textn(r.x + 4, r.y, TXT(w), r.w - 4, cfg, cbg, 0);
 }
 
 static void draw_textbox(const td_widget_t *w, td_rect_t r, bool focused, const td_theme_t *t)
@@ -326,14 +360,14 @@ static void draw_textbox(const td_widget_t *w, td_rect_t r, bool focused, const 
     uint8_t bg = pick(w->bg, t->input_bg);
     td_fill(r, ' ', fg, bg);
     if (w->secret) {
-        int len = (int)strlen(w->text) - w->scroll;
+        int len = (int)strlen(TXT(w)) - w->scroll;
         for (int i = 0; i < len && i < r.w; i++) td_putc(r.x + i, r.y, '*', fg, bg, 0);
     } else {
-        td_textn(r.x, r.y, w->text + w->scroll, r.w, fg, bg, 0);
+        td_textn(r.x, r.y, TXT(w) + w->scroll, r.w, fg, bg, 0);
     }
     if (focused) {
         int cx = r.x + w->value - w->scroll;
-        uint32_t ch = w->text[w->value] ? (uint8_t)(w->secret ? '*' : w->text[w->value]) : ' ';
+        uint32_t ch = TXT(w)[w->value] ? (uint8_t)(w->secret ? '*' : TXT(w)[w->value]) : ' ';
         td_putc(cx, r.y, ch, fg, bg, TD_REVERSE);
     }
 }
@@ -438,20 +472,20 @@ static void checkbox_toggle(td_widget_t *w)
 
 static bool textbox_key(td_widget_t *w, const td_event_t *ev)
 {
-    int len = (int)strlen(w->text);
+    int len = (int)strlen(TXT(w));
     uint32_t k = ev->key;
     if (ev->mods & (TD_MOD_CTRL | TD_MOD_ALT)) return false;
 
     if (k >= 0x20 && k < 0x7F) {
         if (len >= w->maxlen) return true;
-        memmove(w->text + w->value + 1, w->text + w->value, (size_t)(len - w->value + 1));
-        w->text[w->value++] = (char)k;
+        memmove(TXT(w) + w->value + 1, TXT(w) + w->value, (size_t)(len - w->value + 1));
+        TXT(w)[w->value++] = (char)k;
     } else if (k == TD_KEY_BACKSPACE) {
         if (w->value == 0) return true;
-        memmove(w->text + w->value - 1, w->text + w->value, (size_t)(len - w->value + 1));
+        memmove(TXT(w) + w->value - 1, TXT(w) + w->value, (size_t)(len - w->value + 1));
         w->value--;
     } else if (k == TD_KEY_DELETE) {
-        if (w->value < len) memmove(w->text + w->value, w->text + w->value + 1, (size_t)(len - w->value));
+        if (w->value < len) memmove(TXT(w) + w->value, TXT(w) + w->value + 1, (size_t)(len - w->value));
     } else if (k == TD_KEY_LEFT) {
         if (w->value > 0) w->value--;
     } else if (k == TD_KEY_RIGHT) {
@@ -483,13 +517,13 @@ bool td_widgets_paste(td_window_t *win)
     if (!w || w->type != TD_WT_TEXTBOX || !w->visible) return false;
     int n = 0;
     const char *text = td_paste_text(&n);
-    int len = (int)strlen(w->text);
+    int len = (int)strlen(TXT(w));
     for (int i = 0; i < n && text[i] != '\r' && text[i] != '\n'; i++) {
         char c = text[i] == '\t' ? ' ' : text[i];
         if ((unsigned char)c < 0x20 || (unsigned char)c >= 0x7F) continue;
         if (len >= w->maxlen) break;
-        memmove(w->text + w->value + 1, w->text + w->value, (size_t)(len - w->value + 1));
-        w->text[w->value++] = c;
+        memmove(TXT(w) + w->value + 1, TXT(w) + w->value, (size_t)(len - w->value + 1));
+        TXT(w)[w->value++] = c;
         len++;
     }
     int width = local_rect(w).w;
@@ -568,7 +602,7 @@ static void widget_press(td_widget_t *w, const td_event_t *ev, td_rect_t r)
         checkbox_toggle(w);
         break;
     case TD_WT_TEXTBOX: {
-        int len = (int)strlen(w->text);
+        int len = (int)strlen(TXT(w));
         w->value = clamp(w->scroll + ev->x - r.x, 0, len);
         break;
     }
@@ -672,7 +706,7 @@ static void inputbox_ok(td_widget_t *w, void *user)
 {
     inputbox_t *ib = user;
     char text[TD_TEXT_MAX];
-    snprintf(text, sizeof(text), "%s", ib->box->text);
+    snprintf(text, sizeof(text), "%s", td_widget_text(ib->box));
     void (*fn)(const char *, void *) = ib->fn;
     void *fn_user = ib->user;
     td_win_close(w->win);          /* frees ib in on_close */
