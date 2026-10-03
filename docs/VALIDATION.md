@@ -28,8 +28,7 @@ after disconnect was refused. A reboot restored physical recovery access.
 With fresh NVS, Telnet defaulted off and Telnet/SSH/FTP setup was blocked
 until the factory root password changed. Original device settings were restored.
 
-Raw captures, credentials and flash backups remain private. No hardware
-performance claim is inferred from a successful build.
+A successful build alone is not counted as a hardware test.
 
 ## After the first release
 
@@ -66,21 +65,24 @@ performance claim is inferred from a successful build.
 - `passwd` names the factory password only while root has it (WROVER yes;
   4 MB ESP32 and C6, whose root password was changed, no); `ssh start`
   names it.
-- Official updates on the ESP32-C6: `ota official` and *Check for official
-  updates* reach the official site over HTTPS and report that it has no
-  feed yet (404, before the first release with one); the setting persists
-  (`ota notify`). Not tested on the board: finding a newer version and
-  installing it from a feed (Windows Firewall blocks the board from this
-  PC's test server).
+- Official updates: before 0.1.3 was published, `ota official` and *Check
+  for official updates* on the ESP32-C6 reached the official site over
+  HTTPS and reported that it had no feed yet (404); the setting persists
+  (`ota notify`). After publishing, the ESP32 with PSRAM read the 0.1.3
+  feed: `ota official` and the button say "TinyDesk 0.1.3, the newest
+  release, is installed." and fill in the image's URL. Not tested yet:
+  finding a newer release and installing it from the feed.
 - Software Update on the 4 MB ESP32 shows the new explanation; internal RAM
   free on the C6 with LAN, Wi-Fi and SD: 133.7 KB.
 
-## Still to validate before a wider launch
+## Not validated yet
 
-Full Editor save/reopen interaction on every board, live MQTT/Modbus devices,
-OTA updates, standalone Shell firmware on fresh boards, and independent
-installation reports remain release checks. The installer is live at
-https://schikani.github.io/tinydesk-docs/install/; first installations from
-it on every advertised board still have to be recorded.
+- The Editor's save and reopen on every board.
+- MQTT and Modbus with live devices.
+- Installing a newer official release over the air.
+- The Shell firmware on fresh boards.
+- Installations from the web installer
+  (https://schikani.github.io/tinydesk-docs/install/) on every board it
+  offers, and installations by other people.
 
-See [the release checklist](RELEASE_CHECKLIST.md) before tagging a release.
+The release process is in [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md).

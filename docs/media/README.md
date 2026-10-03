@@ -37,5 +37,4 @@ terminal font shows them.
 
 The MP4 is 1280×720 at 50 frames per second; the GIF is 1240×660 at 25. It
 is a serial recording, not camera footage and not the host simulator.
-There is no audio. For a launch film, pair it with footage of the board
-itself.
+There is no audio.
