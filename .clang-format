@@ -1,11 +1,29 @@
-# C style for TinyDesk: run `clang-format -i <file>` (clang-format 16 or later).
+# C style for TinyDesk: run `clang-format -i <file>` (clang-format 16).
 BasedOnStyle: LLVM
 Language: Cpp
 IndentWidth: 4
 TabWidth: 4
 UseTab: Never
 ColumnLimit: 0
-BreakBeforeBraces: Allman
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterCaseLabel: true
+  AfterClass: true
+  AfterControlStatement: Always
+  AfterEnum: true
+  AfterFunction: true
+  AfterNamespace: true
+  AfterStruct: true
+  AfterUnion: true
+  AfterExternBlock: false
+  BeforeCatch: true
+  BeforeElse: true
+  BeforeWhile: false
+  IndentBraces: false
+  SplitEmptyFunction: true
+  SplitEmptyRecord: true
+  SplitEmptyNamespace: true
+IndentExternBlock: NoIndent
 AllowShortFunctionsOnASingleLine: None
 AllowShortIfStatementsOnASingleLine: Never
 AllowShortLoopsOnASingleLine: false

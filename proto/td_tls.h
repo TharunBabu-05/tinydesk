@@ -18,46 +18,45 @@
 #include "td_sock.h"
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
-    typedef struct td_tls td_tls_t;
+typedef struct td_tls td_tls_t;
 
-    typedef struct
-    {
-        const char *ca;
-        size_t ca_len;     /* NULL: the system's roots */
-        const char *cert;
-        size_t cert_len;   /* client certificate (optional) */
-        const char *key;
-        size_t key_len;    /* its private key */
-        const char *key_pass;                       /* for an encrypted key, or NULL */
-        const char *server_name;                    /* SNI and name check */
-        bool insecure;                              /* do not verify the server */
-    } td_tls_config_t;
+typedef struct
+{
+    const char *ca;
+    size_t ca_len;     /* NULL: the system's roots */
+    const char *cert;
+    size_t cert_len;   /* client certificate (optional) */
+    const char *key;
+    size_t key_len;    /* its private key */
+    const char *key_pass;                       /* for an encrypted key, or NULL */
+    const char *server_name;                    /* SNI and name check */
+    bool insecure;                              /* do not verify the server */
+} td_tls_config_t;
 
-    bool td_tls_available(void);
+bool td_tls_available(void);
 
 /* Set up a client session on a connected socket (the socket stays owned by
  * the caller). NULL on failure, with a message in err. */
-    td_tls_t *td_tls_start(td_sock_t sock, const td_tls_config_t *cfg, char *err, size_t cap);
+td_tls_t *td_tls_start(td_sock_t sock, const td_tls_config_t *cfg, char *err, size_t cap);
 
 /* 1: done, 0: call again, -1: failed (message in err). */
-    int td_tls_handshake(td_tls_t *t, char *err, size_t cap);
+int td_tls_handshake(td_tls_t *t, char *err, size_t cap);
 
 /* Like td_sock_send / td_sock_recv: bytes, 0 would block, -1 error/closed. */
-    int td_tls_send(td_tls_t *t, const void *buf, int len);
-    int td_tls_recv(td_tls_t *t, void *buf, int cap);
+int td_tls_send(td_tls_t *t, const void *buf, int len);
+int td_tls_recv(td_tls_t *t, void *buf, int cap);
 
 /* "TLSv1.2 TLS-ECDHE-RSA-WITH-AES-128-GCM-SHA256" */
-    void td_tls_info(td_tls_t *t, char *buf, size_t cap);
+void td_tls_info(td_tls_t *t, char *buf, size_t cap);
 
-    void td_tls_free(td_tls_t *t);
+void td_tls_free(td_tls_t *t);
 
 /* Read a whole file (at most max bytes) into a NUL-terminated buffer the
  * caller frees. *len excludes the NUL. NULL with a message on failure. */
-    char *td_read_file(const char *path, size_t max, size_t *len, char *err, size_t cap);
+char *td_read_file(const char *path, size_t max, size_t *len, char *err, size_t cap);
 
 #ifdef __cplusplus
 }
