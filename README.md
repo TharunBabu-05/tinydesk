@@ -61,6 +61,14 @@ standalone firmware or a POSIX host program. Every
 images for both editions, the PC programs and `SHA256SUMS.txt`; the
 [web installer](https://schikani.github.io/tinydesk-docs/install/) uses the same files.
 
+### Community ports
+
+Maintained by their authors, not built or tested here:
+
+| Port | Hardware | Notes |
+| --- | --- | --- |
+| [TinyTang](https://github.com/aquasock/TinyTang) by [@aquasock](https://github.com/aquasock) | BL616 on the Sipeed Tang Console 138K | Desktop over USB CDC, SD card as filesystem; loads FPGA cores and ROMs from the shell |
+
 ## First connection
 
 Open the board's serial port (any speed on the ESP32-C6; 921600 baud for
