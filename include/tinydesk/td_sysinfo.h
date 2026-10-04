@@ -9,7 +9,8 @@
 #include <stdint.h>
 
 /* Minimal filesystem access for the Files app. */
-typedef struct {
+typedef struct
+{
     const char *root;   /* starting directory, e.g. "/fs" */
 
     /* Call fn once per entry of dir (not "." or ".."). Returns the number of
@@ -40,7 +41,8 @@ typedef struct {
 
 /* ------------------------------------------------------------ network */
 
-typedef struct {
+typedef struct
+{
     bool wifi_up;              /* associated and has an IP address */
     char ssid[33];
     int rssi;                  /* dBm */
@@ -52,9 +54,14 @@ typedef struct {
     char message[64];          /* outcome of the last operation */
 } td_net_status_t;
 
-enum { TD_SERVER_SSH = 0, TD_SERVER_FTP = 1 };
+enum
+{
+    TD_SERVER_SSH = 0,
+    TD_SERVER_FTP = 1
+};
 
-typedef struct {
+typedef struct
+{
     char ssid[33];
     int rssi;
     bool secure;               /* needs a password */
@@ -64,7 +71,8 @@ typedef struct {
 /* Network control for the Network app and the taskbar icon. Everything
  * returns at once; slow work runs in the background and its outcome shows
  * up in status(). */
-typedef struct {
+typedef struct
+{
     void (*status)(td_net_status_t *out);
     bool (*scan)(void);
     /* Results of the last scan; -1 while a scan is still running. */
@@ -91,9 +99,17 @@ typedef struct {
 
 /* ------------------------------------------------------ software update */
 
-enum { TD_OTA_IDLE, TD_OTA_CHECKING, TD_OTA_INSTALLING, TD_OTA_DONE, TD_OTA_FAILED };
+enum
+{
+    TD_OTA_IDLE,
+    TD_OTA_CHECKING,
+    TD_OTA_INSTALLING,
+    TD_OTA_DONE,
+    TD_OTA_FAILED
+};
 
-typedef struct {
+typedef struct
+{
     char version[32];          /* running firmware, e.g. "0.1.0" */
     char built[32];            /* "Sep 24 2026 10:12:03" */
     char sdk[32];              /* "v5.3.1" */
@@ -104,7 +120,8 @@ typedef struct {
     char other_version[32];    /* its version */
 } td_ota_info_t;
 
-typedef struct {
+typedef struct
+{
     int state;                 /* TD_OTA_* */
     int percent;               /* -1 while the size is unknown */
     uint32_t done, total;      /* bytes */
@@ -115,7 +132,8 @@ typedef struct {
 } td_ota_status_t;
 
 /* The newest official release, as the port's update feed describes it. */
-typedef struct {
+typedef struct
+{
     bool valid;                /* a check succeeded */
     bool newer;                /* and it is newer than the installed version */
     char version[24];
@@ -129,7 +147,8 @@ typedef struct {
 
 /* Firmware updates (optional). Sources are an http(s):// URL or a real
  * file path; the work happens in the background. */
-typedef struct {
+typedef struct
+{
     void (*info)(td_ota_info_t *out);
     bool (*start)(const char *source, bool check_only);
     void (*status)(td_ota_status_t *out);
@@ -151,7 +170,8 @@ typedef struct {
 } td_ota_ops_t;
 
 /* One system task (thread), for the Task Manager. */
-typedef struct {
+typedef struct
+{
     char name[16];
     char state;                /* 'R' running, 'r' ready, 'B' blocked, 'S' suspended, 'D' deleted */
     uint8_t priority;
@@ -160,7 +180,8 @@ typedef struct {
     int16_t cpu_tenths;        /* share of all cores since the previous call, in 0.1 %; -1 unknown */
 } td_task_info_t;
 
-typedef struct {
+typedef struct
+{
     const char *platform;      /* "ESP32-C6", "Windows host", ... */
     const char *chip;          /* e.g. "ESP32-C6 rev 0.1, 1 core" */
     const char *sdk_version;   /* e.g. ESP-IDF version */

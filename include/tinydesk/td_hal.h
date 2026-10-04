@@ -9,7 +9,8 @@
 
 #include <stdint.h>
 
-typedef struct td_hal {
+typedef struct td_hal
+{
     /* Return the next input byte (0..255), or -1 if none is waiting.
      * Must never block. */
     int (*read_byte)(void *ctx);

@@ -12,13 +12,14 @@
 #include "td_apps.h"
 
 #define TASKS_MAX 40
-#define WINS_MAX TD_MAX_WINDOWS
+#define WINS_MAX  TD_MAX_WINDOWS
 #define APPS_ROWS 5             /* rows of the window list */
 
 static td_window_t *s_win;
 static td_widget_t *s_apps, *s_tasks;
 
-typedef struct {
+typedef struct
+{
     td_task_info_t tasks[TASKS_MAX];
     int task_count;
     bool tasks_failed;          /* the port could not list them (memory) */
@@ -33,13 +34,20 @@ static tm_t *T;
 
 static const char *state_name(char s)
 {
-    switch (s) {
-    case 'R': return "running";
-    case 'r': return "ready";
-    case 'B': return "blocked";
-    case 'S': return "suspended";
-    case 'D': return "deleted";
-    default: return "?";
+    switch (s)
+    {
+    case 'R':
+        return "running";
+    case 'r':
+        return "ready";
+    case 'B':
+        return "blocked";
+    case 'S':
+        return "suspended";
+    case 'D':
+        return "deleted";
+    default:
+        return "?";
     }
 }
 
@@ -47,7 +55,8 @@ static const char *state_name(char s)
 static int task_cmp(const void *a, const void *b)
 {
     const td_task_info_t *x = a, *y = b;
-    if (x->cpu_tenths != y->cpu_tenths) return y->cpu_tenths - x->cpu_tenths;
+    if (x->cpu_tenths != y->cpu_tenths)
+        return y->cpu_tenths - x->cpu_tenths;
     return strcmp(x->name, y->name);
 }
 
@@ -59,16 +68,22 @@ static void refresh(void)
 
     T->task_count = si->tasks ? si->tasks(T->tasks, TASKS_MAX) : 0;
     T->tasks_failed = T->task_count < 0;
-    if (T->task_count < 0) T->task_count = 0;
+    if (T->task_count < 0)
+        T->task_count = 0;
     T->cpu_tenths = -1;
-    if (T->task_count > 0) {
+    if (T->task_count > 0)
+    {
         int idle = 0;
         bool known = true;
-        for (int i = 0; i < T->task_count; i++) {
-            if (T->tasks[i].cpu_tenths < 0) known = false;
-            else if (strncmp(T->tasks[i].name, "IDLE", 4) == 0) idle += T->tasks[i].cpu_tenths;
+        for (int i = 0; i < T->task_count; i++)
+        {
+            if (T->tasks[i].cpu_tenths < 0)
+                known = false;
+            else if (strncmp(T->tasks[i].name, "IDLE", 4) == 0)
+                idle += T->tasks[i].cpu_tenths;
         }
-        if (known) T->cpu_tenths = idle >= 1000 ? 0 : 1000 - idle;
+        if (known)
+            T->cpu_tenths = idle >= 1000 ? 0 : 1000 - idle;
         qsort(T->tasks, (size_t)T->task_count, sizeof(T->tasks[0]), task_cmp);
     }
     td_list_set_count(s_tasks, T->task_count);
@@ -79,12 +94,15 @@ static const char *app_item(td_widget_t *w, int i, int *fg, void *user)
 {
     (void)w;
     (void)user;
-    if (!T || i >= T->win_count || !td_win_is_open(T->wins[i])) return "";
+    if (!T || i >= T->win_count || !td_win_is_open(T->wins[i]))
+        return "";
     td_window_t *win = T->wins[i];
     bool hidden = (win->flags & TD_WIN_HIDDEN) != 0;
-    if (hidden) *fg = td_theme()->dim;
+    if (hidden)
+        *fg = td_theme()->dim;
     snprintf(T->item, sizeof(T->item), " %s %-40.40s %s", win->icon ? win->icon : "  ", win->title,   /* glyphs: 2 columns */
-             win == td_win_focused() ? "active" : hidden ? "minimised" : "open");
+             win == td_win_focused() ? "active" : hidden ? "minimised"
+                                                         : "open");
     return T->item;
 }
 
@@ -93,11 +111,14 @@ static const char *task_item(td_widget_t *w, int i, int *fg, void *user)
     (void)w;
     (void)fg;
     (void)user;
-    if (!T || i >= T->task_count) return "";
+    if (!T || i >= T->task_count)
+        return "";
     const td_task_info_t *t = &T->tasks[i];
     char cpu[16] = "   -", core[12] = "any";
-    if (t->cpu_tenths >= 0) snprintf(cpu, sizeof(cpu), "%3d.%d", t->cpu_tenths / 10, t->cpu_tenths % 10);
-    if (t->core >= 0) snprintf(core, sizeof(core), "%d", t->core);
+    if (t->cpu_tenths >= 0)
+        snprintf(cpu, sizeof(cpu), "%3d.%d", t->cpu_tenths / 10, t->cpu_tenths % 10);
+    if (t->core >= 0)
+        snprintf(core, sizeof(core), "%d", t->core);
     snprintf(T->item, sizeof(T->item), " %-16.16s %-9s %4u  %-4s %6s %7u", t->name, state_name(t->state),
              (unsigned)t->priority, core, cpu, (unsigned)t->stack_free);
     return T->item;
@@ -106,7 +127,8 @@ static const char *task_item(td_widget_t *w, int i, int *fg, void *user)
 static td_window_t *selected_window(void)
 {
     int i = td_list_selected(s_apps);
-    if (!T || i < 0 || i >= T->win_count || !td_win_is_open(T->wins[i])) return NULL;
+    if (!T || i < 0 || i >= T->win_count || !td_win_is_open(T->wins[i]))
+        return NULL;
     return T->wins[i];
 }
 
@@ -115,7 +137,8 @@ static void on_switch(td_widget_t *w, void *user)
     (void)w;
     (void)user;
     td_window_t *win = selected_window();
-    if (!win) return;
+    if (!win)
+        return;
     td_win_focus(win);          /* also brings a minimised window back */
 }
 
@@ -124,10 +147,12 @@ static void on_end(td_widget_t *w, void *user)
     (void)w;
     (void)user;
     td_window_t *win = selected_window();
-    if (!win) return;
+    if (!win)
+        return;
     snprintf(T->note, sizeof(T->note), "Ending \"%.40s\"", win->title);
     td_win_request_close(win);  /* it may ask to save first */
-    if (td_win_is_open(s_win)) refresh();
+    if (td_win_is_open(s_win))
+        refresh();
 }
 
 static void on_draw(td_window_t *win, int w, int h)
@@ -140,13 +165,17 @@ static void on_draw(td_window_t *win, int w, int h)
 
     /* Totals. */
     int x = td_text(0, 0, "CPU ", t->win_fg, t->win_bg, TD_BOLD);
-    if (T->cpu_tenths >= 0) {
+    if (T->cpu_tenths >= 0)
+    {
         snprintf(line, sizeof(line), "%3d.%d %%", T->cpu_tenths / 10, T->cpu_tenths % 10);
-    } else {
+    }
+    else
+    {
         snprintf(line, sizeof(line), "%s", si->tasks ? "  ..." : "  n/a");
     }
     x += td_text(x, 0, line, t->win_fg, t->win_bg, 0);
-    if (si->cpu_mhz) {
+    if (si->cpu_mhz)
+    {
         snprintf(line, sizeof(line), " of %d MHz", si->cpu_mhz());
         x += td_text(x, 0, line, t->dim, t->win_bg, 0);
     }
@@ -169,16 +198,22 @@ static void on_draw(td_window_t *win, int w, int h)
 
     int ty = 4 + APPS_ROWS;
     td_text(0, ty, "System tasks", t->win_fg, t->win_bg, TD_BOLD);
-    if (si->tasks && T->tasks_failed) {
+    if (si->tasks && T->tasks_failed)
+    {
         td_textn(0, ty + 1, " Not enough memory to list the tasks: close a window.", w, t->accent, t->win_bg, 0);
-    } else if (si->tasks) {
+    }
+    else if (si->tasks)
+    {
         snprintf(line, sizeof(line), "(%d, busiest first)", T->task_count);
         td_text(13, ty, line, t->dim, t->win_bg, 0);
         td_textn(0, ty + 1, " Name             State     Prio  Core  CPU %  Stack free", w, t->dim, t->win_bg, 0);
-    } else {
+    }
+    else
+    {
         td_textn(0, ty + 1, " The task list is not available on this platform.", w, t->dim, t->win_bg, 0);
     }
-    if (T->note[0]) td_textn(22, 3 + APPS_ROWS, T->note, w - 22, t->accent, t->win_bg, 0);
+    if (T->note[0])
+        td_textn(22, 3 + APPS_ROWS, T->note, w - 22, t->accent, t->win_bg, 0);
 }
 
 static void on_tick(td_window_t *win)
@@ -198,7 +233,8 @@ static void on_close(td_window_t *win)
 static bool on_event(td_window_t *win, const td_event_t *ev)
 {
     (void)win;
-    if (ev->type == TD_EV_KEY && ev->key == TD_KEY_DELETE && ev->mods == 0) {
+    if (ev->type == TD_EV_KEY && ev->key == TD_KEY_DELETE && ev->mods == 0)
+    {
         on_end(NULL, NULL);
         return true;
     }
@@ -207,12 +243,14 @@ static bool on_event(td_window_t *win, const td_event_t *ev)
 
 static void launch(void)
 {
-    if (td_win_is_open(s_win)) {
+    if (td_win_is_open(s_win))
+    {
         td_win_focus(s_win);
         return;
     }
     T = calloc(1, sizeof(*T));
-    if (!T) {
+    if (!T)
+    {
         td_msgbox("Task Manager", "Not enough memory. Close a window, then try again.", "OK", NULL, NULL);
         return;
     }
@@ -230,7 +268,8 @@ static void launch(void)
         .tick_ms = 1000,
     };
     s_win = td_win_create(&d);
-    if (!s_win) {
+    if (!s_win)
+    {
         free(T);
         T = NULL;
         return;
@@ -244,6 +283,9 @@ static void launch(void)
     refresh();
 }
 
-static const td_app_t s_app = { "Task Manager", launch, "\xE2\x96\x90\xE2\x96\x8C" };   /* U+2590 U+258C: in every console font */
+static const td_app_t s_app = {"Task Manager", launch, "\xE2\x96\x90\xE2\x96\x8C"};   /* U+2590 U+258C: in every console font */
 
-void td_taskmgr_register(void) { td_app_register(&s_app); }
+void td_taskmgr_register(void)
+{
+    td_app_register(&s_app);
+}

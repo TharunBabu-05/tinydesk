@@ -11,9 +11,9 @@
 
 static void test_crc(void)
 {
-    const uint8_t frame[] = { 0x01, 0x03, 0x00, 0x00, 0x00, 0x0A };
+    const uint8_t frame[] = {0x01, 0x03, 0x00, 0x00, 0x00, 0x0A};
     CHECK_EQ(td_mb_crc16(frame, 6), 0xCDC5);        /* sent as C5 CD */
-    const uint8_t f2[] = { 0x11, 0x03, 0x00, 0x6B, 0x00, 0x03 };
+    const uint8_t f2[] = {0x11, 0x03, 0x00, 0x6B, 0x00, 0x03};
     CHECK_EQ(td_mb_crc16(f2, 6), 0x8776);            /* the spec's example: 76 87 */
 }
 
@@ -33,7 +33,7 @@ static void test_mqtt_length(void)
     CHECK_EQ(td_mqtt_decode_length(b, 4, &v), 4);
     CHECK_EQ(v, 2097152);
     CHECK_EQ(td_mqtt_decode_length(b, 2, &v), 0);    /* need more */
-    const uint8_t bad[] = { 0xFF, 0xFF, 0xFF, 0xFF, 0x01 };
+    const uint8_t bad[] = {0xFF, 0xFF, 0xFF, 0xFF, 0x01};
     CHECK_EQ(td_mqtt_decode_length(bad, 5, &v), -1);
 }
 
@@ -54,14 +54,14 @@ static void test_pdu(void)
 {
     static td_mb_tables_t t;
     uint8_t resp[260];
-    td_mb_request_t r = { .fc = 16, .addr = 10, .nvalues = 3, .values = { 1, 2, 0xBEEF } };
+    td_mb_request_t r = {.fc = 16, .addr = 10, .nvalues = 3, .values = {1, 2, 0xBEEF}};
     uint8_t pdu[260];
     int n = td_mb_build_pdu(&r, pdu);
     CHECK_EQ(n, 6 + 6);
     CHECK_EQ(td_mb_serve_pdu(&t, pdu, n, resp), 5);
     CHECK_EQ(t.holding[12], 0xBEEF);
 
-    td_mb_request_t rd = { .fc = 3, .addr = 10, .count = 3 };
+    td_mb_request_t rd = {.fc = 3, .addr = 10, .count = 3};
     n = td_mb_build_pdu(&rd, pdu);
     int rl = td_mb_serve_pdu(&t, pdu, n, resp);
     td_mb_result_t res;
@@ -71,13 +71,13 @@ static void test_pdu(void)
     CHECK_EQ(res.values[2], 0xBEEF);
 
     /* Coils: write 3 with fc15, one with fc5, read back 8. */
-    td_mb_request_t wc = { .fc = 15, .addr = 0, .nvalues = 3, .values = { 1, 0, 1 } };
+    td_mb_request_t wc = {.fc = 15, .addr = 0, .nvalues = 3, .values = {1, 0, 1}};
     n = td_mb_build_pdu(&wc, pdu);
     CHECK_EQ(td_mb_serve_pdu(&t, pdu, n, resp), 5);
-    td_mb_request_t w1 = { .fc = 5, .addr = 7, .nvalues = 1, .values = { 1 } };
+    td_mb_request_t w1 = {.fc = 5, .addr = 7, .nvalues = 1, .values = {1}};
     n = td_mb_build_pdu(&w1, pdu);
     CHECK_EQ(td_mb_serve_pdu(&t, pdu, n, resp), 5);
-    td_mb_request_t rc = { .fc = 1, .addr = 0, .count = 8 };
+    td_mb_request_t rc = {.fc = 1, .addr = 0, .count = 8};
     n = td_mb_build_pdu(&rc, pdu);
     rl = td_mb_serve_pdu(&t, pdu, n, resp);
     td_mb_decode_pdu(&rc, resp, rl, &res);
@@ -85,12 +85,12 @@ static void test_pdu(void)
     CHECK(res.values[0] == 1 && res.values[1] == 0 && res.values[2] == 1 && res.values[7] == 1);
 
     /* Exceptions. */
-    td_mb_request_t far = { .fc = 3, .addr = 127, .count = 2 };
+    td_mb_request_t far = {.fc = 3, .addr = 127, .count = 2};
     n = td_mb_build_pdu(&far, pdu);
     rl = td_mb_serve_pdu(&t, pdu, n, resp);
     td_mb_decode_pdu(&far, resp, rl, &res);
     CHECK_EQ(res.status, 2);                         /* illegal data address */
-    const uint8_t weird[] = { 0x2B, 0x0E, 0x01, 0x00, 0x00 };
+    const uint8_t weird[] = {0x2B, 0x0E, 0x01, 0x00, 0x00};
     CHECK_EQ(td_mb_serve_pdu(&t, weird, 5, resp), 2);
     CHECK_EQ(resp[0], 0xAB);
     CHECK_EQ(resp[1], 1);                            /* illegal function */
@@ -112,7 +112,11 @@ static int s_line;
 
 static bool fake_open(int port, uint32_t baud, char parity, int stop, char *err, size_t cap)
 {
-    (void)baud; (void)parity; (void)stop; (void)err; (void)cap;
+    (void)baud;
+    (void)parity;
+    (void)stop;
+    (void)err;
+    (void)cap;
     s_line = port;
     return true;
 }
@@ -123,13 +127,15 @@ static int fake_write(const uint8_t *buf, int len)
     s_req_len += len;
     /* A whole request: unit + PDU + CRC. Answer as unit 7 would. */
     uint16_t crc = td_mb_crc16(s_req, s_req_len - 2);
-    if (s_req_len >= 8 && s_req[s_req_len - 2] == (uint8_t)crc && s_req[s_req_len - 1] == (uint8_t)(crc >> 8)) {
+    if (s_req_len >= 8 && s_req[s_req_len - 2] == (uint8_t)crc && s_req[s_req_len - 1] == (uint8_t)(crc >> 8))
+    {
         s_ans[0] = s_req[0];
         int rl = td_mb_serve_pdu(&s_slave, s_req + 1, s_req_len - 3, s_ans + 1);
         uint16_t c = td_mb_crc16(s_ans, rl + 1);
         s_ans[rl + 1] = (uint8_t)c;
         s_ans[rl + 2] = (uint8_t)(c >> 8);
-        if (s_corrupt) s_ans[rl + 2] ^= 0x55;
+        if (s_corrupt)
+            s_ans[rl + 2] ^= 0x55;
         s_ans_len = rl + 3;
         s_ans_pos = 0;
         s_req_len = 0;
@@ -140,24 +146,32 @@ static int fake_write(const uint8_t *buf, int len)
 static int fake_read(uint8_t *buf, int cap)
 {
     int n = s_ans_len - s_ans_pos;
-    if (n > 3) n = 3;                 /* dribble in, like a real line */
-    if (n > cap) n = cap;
+    if (n > 3)
+        n = 3;                 /* dribble in, like a real line */
+    if (n > cap)
+        n = cap;
     memcpy(buf, s_ans + s_ans_pos, (size_t)n);
     s_ans_pos += n;
     return n;
 }
 
-static void fake_close(void) {}
+static void fake_close(void)
+{
+}
 
-static const char *fake_name(int port) { (void)port; return "fake"; }
+static const char *fake_name(int port)
+{
+    (void)port;
+    return "fake";
+}
 
-static const td_mb_serial_t s_fake = { 2, fake_name, fake_open, fake_write, fake_read, fake_close };
+static const td_mb_serial_t s_fake = {2, fake_name, fake_open, fake_write, fake_read, fake_close};
 
 static void test_rtu(void)
 {
     td_mb_set_serial(&s_fake);
     s_slave.input[5] = 1234;
-    td_mb_request_t r = { .unit = 7, .fc = 4, .addr = 5, .count = 2 };
+    td_mb_request_t r = {.unit = 7, .fc = 4, .addr = 5, .count = 2};
     snprintf(r.target, sizeof(r.target), "rtu:19200:8E1");
     td_mb_result_t res;
     char err[80] = "";
@@ -188,17 +202,18 @@ static void test_tcp(void)
     uint16_t port = 15020;
     bool up = td_mb_server_start(port, err, sizeof(err));
     CHECK(up);
-    if (!up) {
+    if (!up)
+    {
         printf("server: %s\n", err);
         return;
     }
-    td_mb_request_t w = { .unit = 1, .fc = 16, .addr = 0, .nvalues = 2, .values = { 42, 4242 } };
+    td_mb_request_t w = {.unit = 1, .fc = 16, .addr = 0, .nvalues = 2, .values = {42, 4242}};
     snprintf(w.target, sizeof(w.target), "127.0.0.1:%u", (unsigned)port);
     td_mb_result_t res;
     CHECK(td_mb_transact(&w, &res, err, sizeof(err)));
     CHECK_EQ(res.status, 0);
 
-    uint16_t v[2] = { 0, 0 };
+    uint16_t v[2] = {0, 0};
     CHECK_EQ(td_mb_server_get(TD_MB_HOLDING, 0, 2, v), 2);
     CHECK(v[0] == 42 && v[1] == 4242);
 
@@ -239,7 +254,8 @@ static void test_split(void)
 static bool plain_resolve(const char *path, char *real, size_t cap, void *ctx)
 {
     (void)ctx;
-    if (strstr(path, "..")) return false;
+    if (strstr(path, ".."))
+        return false;
     snprintf(real, cap, "%s", path);
     return true;
 }
@@ -247,7 +263,8 @@ static bool plain_resolve(const char *path, char *real, size_t cap, void *ctx)
 static bool write_text(const char *path, const char *text)
 {
     FILE *f = fopen(path, "wb");
-    if (!f) return false;
+    if (!f)
+        return false;
     fputs(text, f);
     return fclose(f) == 0;
 }
@@ -276,7 +293,8 @@ static void test_config(void)
     td_mqtt_config_t c;
     char err[96] = "";
     CHECK(td_mqtt_load_config(path, plain_resolve, NULL, &c, err, sizeof(err)));
-    if (err[0]) printf("config: %s\n", err);
+    if (err[0])
+        printf("config: %s\n", err);
     CHECK(!strcmp(c.host, "broker.example.com"));
     CHECK(c.tls && c.port == 0);                     /* 8883 chosen at connect */
     CHECK(!strcmp(c.client_id, "kitchen"));

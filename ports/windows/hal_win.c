@@ -8,7 +8,8 @@
 
 #include "../common/td_host_hal.h"
 
-typedef struct {
+typedef struct
+{
     HANDLE in, out;
     DWORD in_mode, out_mode;
     UINT in_cp, out_cp;
@@ -22,7 +23,8 @@ static win_ctx_t s_ctx;
 
 static void queue_byte(win_ctx_t *c, uint8_t b)
 {
-    if (c->q_count == (int)sizeof(c->queue)) return;
+    if (c->q_count == (int)sizeof(c->queue))
+        return;
     c->queue[(c->q_head + c->q_count) % sizeof(c->queue)] = b;
     c->q_count++;
 }
@@ -30,41 +32,53 @@ static void queue_byte(win_ctx_t *c, uint8_t b)
 static void queue_char(win_ctx_t *c, WCHAR wc)
 {
     uint32_t cp = wc;
-    if (wc >= 0xD800 && wc <= 0xDBFF) {
+    if (wc >= 0xD800 && wc <= 0xDBFF)
+    {
         c->high_surrogate = wc;
         return;
     }
-    if (wc >= 0xDC00 && wc <= 0xDFFF) {
-        if (!c->high_surrogate) return;
+    if (wc >= 0xDC00 && wc <= 0xDFFF)
+    {
+        if (!c->high_surrogate)
+            return;
         cp = 0x10000u + (((uint32_t)c->high_surrogate - 0xD800u) << 10) + (wc - 0xDC00u);
         c->high_surrogate = 0;
     }
     uint8_t u[4];
     int n = td_utf8_encode(cp, u);
-    for (int i = 0; i < n; i++) queue_byte(c, u[i]);
+    for (int i = 0; i < n; i++)
+        queue_byte(c, u[i]);
 }
 
 /* Move whatever the console has into our byte queue, without blocking. */
 static void poll_console(win_ctx_t *c)
 {
     DWORD pending = 0;
-    if (!GetNumberOfConsoleInputEvents(c->in, &pending) || pending == 0) return;
+    if (!GetNumberOfConsoleInputEvents(c->in, &pending) || pending == 0)
+        return;
     INPUT_RECORD rec[32];
     DWORD got = 0;
-    if (!ReadConsoleInputW(c->in, rec, pending < 32 ? pending : 32, &got)) return;
-    for (DWORD i = 0; i < got; i++) {
-        if (rec[i].EventType != KEY_EVENT) continue;
+    if (!ReadConsoleInputW(c->in, rec, pending < 32 ? pending : 32, &got))
+        return;
+    for (DWORD i = 0; i < got; i++)
+    {
+        if (rec[i].EventType != KEY_EVENT)
+            continue;
         const KEY_EVENT_RECORD *k = &rec[i].Event.KeyEvent;
-        if (!k->bKeyDown || k->uChar.UnicodeChar == 0) continue;
-        for (WORD r = 0; r < (k->wRepeatCount ? k->wRepeatCount : 1); r++) queue_char(c, k->uChar.UnicodeChar);
+        if (!k->bKeyDown || k->uChar.UnicodeChar == 0)
+            continue;
+        for (WORD r = 0; r < (k->wRepeatCount ? k->wRepeatCount : 1); r++)
+            queue_char(c, k->uChar.UnicodeChar);
     }
 }
 
 static int win_read_byte(void *ctx)
 {
     win_ctx_t *c = ctx;
-    if (c->q_count == 0) poll_console(c);
-    if (c->q_count == 0) return -1;
+    if (c->q_count == 0)
+        poll_console(c);
+    if (c->q_count == 0)
+        return -1;
     uint8_t b = c->queue[c->q_head];
     c->q_head = (c->q_head + 1) % (int)sizeof(c->queue);
     c->q_count--;
@@ -75,7 +89,8 @@ static int win_write(void *ctx, const uint8_t *buf, int len)
 {
     win_ctx_t *c = ctx;
     DWORD written = 0;
-    if (!WriteFile(c->out, buf, (DWORD)len, &written, NULL)) return 0;
+    if (!WriteFile(c->out, buf, (DWORD)len, &written, NULL))
+        return 0;
     return (int)written;
 }
 
@@ -91,7 +106,7 @@ static void win_sleep(void *ctx, uint32_t ms)
     Sleep(ms);
 }
 
-static const td_hal_t s_hal = { win_read_byte, win_write, win_millis, win_sleep, &s_ctx };
+static const td_hal_t s_hal = {win_read_byte, win_write, win_millis, win_sleep, &s_ctx};
 
 static BOOL WINAPI on_console_event(DWORD type)
 {
@@ -105,7 +120,8 @@ const td_hal_t *td_host_hal_open(void)
     win_ctx_t *c = &s_ctx;
     c->in = GetStdHandle(STD_INPUT_HANDLE);
     c->out = GetStdHandle(STD_OUTPUT_HANDLE);
-    if (!GetConsoleMode(c->in, &c->in_mode) || !GetConsoleMode(c->out, &c->out_mode)) return NULL;
+    if (!GetConsoleMode(c->in, &c->in_mode) || !GetConsoleMode(c->out, &c->out_mode))
+        return NULL;
     c->in_cp = GetConsoleCP();
     c->out_cp = GetConsoleOutputCP();
 
@@ -124,7 +140,8 @@ const td_hal_t *td_host_hal_open(void)
 void td_host_hal_close(void)
 {
     win_ctx_t *c = &s_ctx;
-    if (!c->active) return;
+    if (!c->active)
+        return;
     c->active = false;
     SetConsoleMode(c->in, c->in_mode);
     SetConsoleMode(c->out, c->out_mode);

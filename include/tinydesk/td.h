@@ -22,12 +22,13 @@
  * terminals that support it act on it). At most TD_OSC52_MAX bytes. */
 void td_host_clipboard_set(const char *text, int len);
 
-#define TD_VERSION "0.1.3"
-#define TD_REPO_URL "https://github.com/schikani/tinydesk"
+#define TD_VERSION        "0.1.3"
+#define TD_REPO_URL       "https://github.com/schikani/tinydesk"
 #define TD_SHELL_REPO_URL "https://github.com/schikani/tinydesk-shell"
 
 /* Runtime statistics (shown by System Monitor). */
-typedef struct {
+typedef struct
+{
     int cols, rows;              /* screen size in use */
     int term_cols, term_rows;    /* size the terminal reported (may exceed TD_MAX_COLS x TD_MAX_ROWS) */
     uint32_t frames;             /* frames rendered */

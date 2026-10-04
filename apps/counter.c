@@ -35,7 +35,8 @@ static void on_tick(td_window_t *win)
 {
     (void)win;
     s_seconds++;
-    if (td_checkbox_get(s_auto)) s_count++;
+    if (td_checkbox_get(s_auto))
+        s_count++;
     show();
 }
 
@@ -47,7 +48,8 @@ static void on_close(td_window_t *win)
 
 static void launch(void)
 {
-    if (td_win_is_open(s_win)) {
+    if (td_win_is_open(s_win))
+    {
         td_win_focus(s_win);
         return;
     }
@@ -60,7 +62,8 @@ static void launch(void)
         .tick_ms = 1000,
     };
     s_win = td_win_create(&d);
-    if (!s_win) return;
+    if (!s_win)
+        return;
     s_seconds = 0;
 
     s_value = td_label(s_win, 2, 1, 0, "");
@@ -72,6 +75,9 @@ static void launch(void)
     show();
 }
 
-static const td_app_t s_app = { "Counter", launch, "+1" };
+static const td_app_t s_app = {"Counter", launch, "+1"};
 
-void td_counter_register(void) { td_app_register(&s_app); }
+void td_counter_register(void)
+{
+    td_app_register(&s_app);
+}

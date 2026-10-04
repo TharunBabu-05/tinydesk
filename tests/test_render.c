@@ -11,17 +11,31 @@ static int s_accept = 1 << 30;   /* bytes the fake link accepts */
 static int fake_write(void *ctx, const uint8_t *buf, int len)
 {
     (void)ctx;
-    if (len > s_accept) len = s_accept;
+    if (len > s_accept)
+        len = s_accept;
     s_accept -= len;
-    if (s_len + len < (int)sizeof(s_out)) memcpy(s_out + s_len, buf, (size_t)len);
+    if (s_len + len < (int)sizeof(s_out))
+        memcpy(s_out + s_len, buf, (size_t)len);
     s_len += len;
     return len;
 }
-static int fake_read(void *ctx) { (void)ctx; return -1; }
-static uint32_t fake_millis(void *ctx) { (void)ctx; return 0; }
-static void fake_sleep(void *ctx, uint32_t ms) { (void)ctx; (void)ms; }
+static int fake_read(void *ctx)
+{
+    (void)ctx;
+    return -1;
+}
+static uint32_t fake_millis(void *ctx)
+{
+    (void)ctx;
+    return 0;
+}
+static void fake_sleep(void *ctx, uint32_t ms)
+{
+    (void)ctx;
+    (void)ms;
+}
 
-static const td_hal_t s_hal = { fake_read, fake_write, fake_millis, fake_sleep, NULL };
+static const td_hal_t s_hal = {fake_read, fake_write, fake_millis, fake_sleep, NULL};
 static td_buffer_t s_front, s_back;
 static td_renderer_t s_r;
 
@@ -34,13 +48,18 @@ static void reset_output(void)
 static bool output_is(const char *expect)
 {
     s_out[s_len] = '\0';
-    if (strcmp(s_out, expect) == 0) return true;
+    if (strcmp(s_out, expect) == 0)
+        return true;
     printf("  output: ");
-    for (int i = 0; i < s_len; i++) {
+    for (int i = 0; i < s_len; i++)
+    {
         unsigned char c = (unsigned char)s_out[i];
-        if (c == 0x1b) printf("\\e");
-        else if (c < 0x20 || c >= 0x7f) printf("\\x%02x", c);
-        else putchar(c);
+        if (c == 0x1b)
+            printf("\\e");
+        else if (c < 0x20 || c >= 0x7f)
+            printf("\\x%02x", c);
+        else
+            putchar(c);
     }
     printf("\n");
     return false;

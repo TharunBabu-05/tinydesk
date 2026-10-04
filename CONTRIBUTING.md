@@ -10,7 +10,8 @@ revision when reporting a problem.
    (ESP-IDF 5.3.1). Code in `ports/esp_idf` is shared by all three.
 4. Describe what changed for users (and the API) in the pull request, so the documentation
    and the changelog can follow.
-5. Keep your own board out of it: pins go in `ports/*/board.conf` (ignored by git),
+5. Format the C files you change with `clang-format -i` (the repository's `.clang-format`).
+6. Keep your own board out of it: pins go in `ports/*/board.conf` (ignored by git),
    never in code. New hardware keys go, commented out, into both `board.example.conf` files.
 
 Shell changes are made and pushed in `tinydesk-shell` first; then the new

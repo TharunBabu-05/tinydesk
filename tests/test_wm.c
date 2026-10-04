@@ -5,15 +5,32 @@
 #include "tinydesk/td.h"
 
 static uint32_t s_now;
-static int fake_read(void *ctx) { (void)ctx; return -1; }
-static int fake_write(void *ctx, const uint8_t *b, int n) { (void)ctx; (void)b; return n; }
-static uint32_t fake_millis(void *ctx) { (void)ctx; return s_now; }
-static void fake_sleep(void *ctx, uint32_t ms) { (void)ctx; s_now += ms; }
-static const td_hal_t s_hal = { fake_read, fake_write, fake_millis, fake_sleep, NULL };
+static int fake_read(void *ctx)
+{
+    (void)ctx;
+    return -1;
+}
+static int fake_write(void *ctx, const uint8_t *b, int n)
+{
+    (void)ctx;
+    (void)b;
+    return n;
+}
+static uint32_t fake_millis(void *ctx)
+{
+    (void)ctx;
+    return s_now;
+}
+static void fake_sleep(void *ctx, uint32_t ms)
+{
+    (void)ctx;
+    s_now += ms;
+}
+static const td_hal_t s_hal = {fake_read, fake_write, fake_millis, fake_sleep, NULL};
 
 static void mouse(int action, int button, int x, int y)
 {
-    td_event_t ev = { 0 };
+    td_event_t ev = {0};
     ev.type = TD_EV_MOUSE;
     ev.action = (uint8_t)action;
     ev.button = (uint8_t)button;
@@ -26,7 +43,7 @@ static void mouse(int action, int button, int x, int y)
 
 static void key(uint32_t k, uint8_t mods)
 {
-    td_event_t ev = { 0 };
+    td_event_t ev = {0};
     ev.type = TD_EV_KEY;
     ev.key = k;
     ev.mods = mods;
@@ -34,23 +51,36 @@ static void key(uint32_t k, uint8_t mods)
 }
 
 static int s_clicks;
-static void on_click(td_widget_t *w, void *user) { (void)w; (void)user; s_clicks++; }
+static void on_click(td_widget_t *w, void *user)
+{
+    (void)w;
+    (void)user;
+    s_clicks++;
+}
 static bool s_closed;
-static void on_close(td_window_t *w) { (void)w; s_closed = true; }
+static void on_close(td_window_t *w)
+{
+    (void)w;
+    s_closed = true;
+}
 
 static int s_launches;
-static void launch_app(void) { s_launches++; }
-static const td_app_t s_app_a = { "Alpha", launch_app, ">_" };
-static const td_app_t s_app_b = { "Beta Two Words", launch_app, NULL };
+static void launch_app(void)
+{
+    s_launches++;
+}
+static const td_app_t s_app_a = {"Alpha", launch_app, ">_"};
+static const td_app_t s_app_b = {"Beta Two Words", launch_app, NULL};
 
 static void double_click(int x, int y)
 {
-    td_event_t ev = { 0 };
+    td_event_t ev = {0};
     ev.type = TD_EV_MOUSE;
     ev.button = TD_BUTTON_LEFT;
     ev.x = (int16_t)x;
     ev.y = (int16_t)y;
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < 2; i++)
+    {
         ev.time_ms = s_now;
         ev.action = TD_MOUSE_PRESS;
         td_wm_dispatch(&ev);
@@ -63,8 +93,16 @@ static void double_click(int x, int y)
 /* A desktop with one folder and one file (provider items 0 and 1). */
 static int s_dropped_on = -2;
 static char s_dropped_name[48];
-static int prov_count(void *u) { (void)u; return 2; }
-static const char *prov_label(int i, void *u) { (void)u; return i == 0 ? "Folder" : "file.txt"; }
+static int prov_count(void *u)
+{
+    (void)u;
+    return 2;
+}
+static const char *prov_label(int i, void *u)
+{
+    (void)u;
+    return i == 0 ? "Folder" : "file.txt";
+}
 static bool prov_drag(int i, td_drag_item_t *item, void *u)
 {
     (void)u;
@@ -79,13 +117,18 @@ static void prov_drop(int i, const td_drag_item_t *item, void *u)
     snprintf(s_dropped_name, sizeof(s_dropped_name), "%s", item->name);
 }
 static const td_desktop_provider_t s_prov = {
-    .count = prov_count, .label = prov_label, .drag = prov_drag, .drop = prov_drop,
+    .count = prov_count,
+    .label = prov_label,
+    .drag = prov_drag,
+    .drop = prov_drop,
 };
 
 static bool s_win_drop;
 static bool win_on_drop(td_window_t *w, int x, int y, const td_drag_item_t *item)
 {
-    (void)w; (void)x; (void)y;
+    (void)w;
+    (void)x;
+    (void)y;
     s_win_drop = strcmp(item->name, "file.txt") == 0;
     return true;
 }
@@ -124,8 +167,7 @@ static void test_drag_and_drop(void)
     CHECK_EQ(s_dropped_on, -2);
 
     /* Dropping on a window goes to its on_drop. */
-    td_window_desc_t d = { .title = "Target", .rect = td_rect(40, 5, 30, 10), .flags = TD_WIN_DEFAULT,
-                           .on_drop = win_on_drop };
+    td_window_desc_t d = {.title = "Target", .rect = td_rect(40, 5, 30, 10), .flags = TD_WIN_DEFAULT, .on_drop = win_on_drop};
     td_win_create(&d);
     mouse(TD_MOUSE_PRESS, TD_BUTTON_LEFT, file_x, file_y);
     mouse(TD_MOUSE_DRAG, TD_BUTTON_LEFT, 50, 9);
@@ -181,7 +223,7 @@ int main(void)
     CHECK_EQ(td_stats()->cols, 80);
     CHECK_EQ(td_stats()->rows, 25);
 
-    td_window_desc_t d = { .title = "A", .rect = td_rect(5, 3, 30, 10), .flags = TD_WIN_DEFAULT, .on_close = on_close };
+    td_window_desc_t d = {.title = "A", .rect = td_rect(5, 3, 30, 10), .flags = TD_WIN_DEFAULT, .on_close = on_close};
     td_window_t *a = td_win_create(&d);
     d.title = "B";
     d.rect = td_rect(20, 6, 30, 10);

@@ -16,8 +16,8 @@
 
 #include "td_apps.h"
 
-#define NAME_LEN 32
-#define PATH_LEN TD_PATH_MAX
+#define NAME_LEN  32
+#define PATH_LEN  TD_PATH_MAX
 #define FOLLOW_MS 1000
 #define EXPECT_MS 10000
 
@@ -29,19 +29,34 @@ static uint32_t s_expect_until;
 static char s_login_name[NAME_LEN];  /* Switch user dialog */
 static bool s_started;
 
-const char *td_session_user(void) { return s_user; }
-bool td_session_is_root(void) { return strcmp(s_user, "root") == 0; }
-const char *td_session_home(void) { return s_home; }
-const char *td_session_jail(void) { return s_jail; }
+const char *td_session_user(void)
+{
+    return s_user;
+}
+bool td_session_is_root(void)
+{
+    return strcmp(s_user, "root") == 0;
+}
+const char *td_session_home(void)
+{
+    return s_home;
+}
+const char *td_session_jail(void)
+{
+    return s_jail;
+}
 
 static void compute_paths(void)
 {
     const td_fs_ops_t *fs = td_sysinfo()->fs;
     const char *root = fs ? fs->root : "";
-    if (td_session_is_root()) {
+    if (td_session_is_root())
+    {
         snprintf(s_home, sizeof(s_home), "%s/root", root);
         snprintf(s_jail, sizeof(s_jail), "%s", root);
-    } else {
+    }
+    else
+    {
         snprintf(s_home, sizeof(s_home), "%s/home/%.*s", root, NAME_LEN - 1, s_user);
         snprintf(s_jail, sizeof(s_jail), "%s", s_home);
     }
@@ -50,15 +65,21 @@ static void compute_paths(void)
 bool td_session_real_path(const char *path, char *real, size_t cap)
 {
     const td_fs_ops_t *fs = td_sysinfo()->fs;
-    if (!fs || !path || !path[0] || strstr(path, "..")) return false;
+    if (!fs || !path || !path[0] || strstr(path, ".."))
+        return false;
     char home[PATH_LEN], logical[PATH_LEN + 96];
     snprintf(home, sizeof(home), "%s", td_shell_path(s_home));
-    if (path[0] == '~') snprintf(logical, sizeof(logical), "%s%s", home, path + 1);
-    else if (path[0] == '/') snprintf(logical, sizeof(logical), "%s", path);
-    else snprintf(logical, sizeof(logical), "%s/%s", home, path);
-    if (!td_session_is_root()) {
+    if (path[0] == '~')
+        snprintf(logical, sizeof(logical), "%s%s", home, path + 1);
+    else if (path[0] == '/')
+        snprintf(logical, sizeof(logical), "%s", path);
+    else
+        snprintf(logical, sizeof(logical), "%s/%s", home, path);
+    if (!td_session_is_root())
+    {
         size_t n = strlen(home);
-        if (strncmp(logical, home, n) != 0 || (logical[n] != '/' && logical[n] != '\0')) return false;
+        if (strncmp(logical, home, n) != 0 || (logical[n] != '/' && logical[n] != '\0'))
+            return false;
     }
     return snprintf(real, cap, "%s%s", fs->root, logical) < (int)cap;
 }
@@ -74,13 +95,16 @@ static const char *shell_user(void)
 static void shell_redraw(void)
 {
     const td_term_backend_t *b = td_terminal_backend();
-    if (b && b->write) b->write(b->ctx, (const uint8_t *)"\x0c", 1);
+    if (b && b->write)
+        b->write(b->ctx, (const uint8_t *)"\x0c", 1);
 }
 
 void td_session_switch(const char *user, bool switch_shell)
 {
-    if (!user || !user[0]) return;
-    if (strcmp(user, s_user) == 0 && !switch_shell) return;
+    if (!user || !user[0])
+        return;
+    if (strcmp(user, s_user) == 0 && !switch_shell)
+        return;
 
     /* Nothing of the previous user may stay on screen. */
     td_menu_close();
@@ -94,11 +118,14 @@ void td_session_switch(const char *user, bool switch_shell)
     td_clipboard_clear();            /* nothing copied by the previous user */
 
     const td_term_backend_t *b = td_terminal_backend();
-    if (switch_shell && b && b->set_user) {
+    if (switch_shell && b && b->set_user)
+    {
         snprintf(s_expect, sizeof(s_expect), "%s", user);
         s_expect_until = td_millis() + EXPECT_MS;
         b->set_user(b->ctx, user);
-    } else {
+    }
+    else
+    {
         shell_redraw();
     }
 
@@ -113,13 +140,17 @@ static void follow_shell(void *user)
 {
     (void)user;
     const char *su = shell_user();
-    if (!su) return;
-    if (s_expect[0]) {
+    if (!su)
+        return;
+    if (s_expect[0])
+    {
         /* We asked for a switch; wait until the shell has made it. */
-        if (strcmp(su, s_expect) != 0 && (int32_t)(s_expect_until - td_millis()) > 0) return;
+        if (strcmp(su, s_expect) != 0 && (int32_t)(s_expect_until - td_millis()) > 0)
+            return;
         s_expect[0] = '\0';
     }
-    if (strcmp(su, s_user) != 0) td_session_switch(su, false);
+    if (strcmp(su, s_user) != 0)
+        td_session_switch(su, false);
 }
 
 /* ------------------------------------------------ Start > Switch user */
@@ -129,7 +160,8 @@ static void password_answer(const char *password, void *user)
     (void)user;
     const td_sysinfo_t *si = td_sysinfo();
     bool ok = si->authenticate && si->authenticate(s_login_name, password);
-    if (!ok) {
+    if (!ok)
+    {
         td_msgbox("Switch user", "Wrong user name or password.", "OK", NULL, NULL);
         return;
     }
@@ -140,7 +172,8 @@ static void name_answer(const char *name, void *user)
 {
     (void)user;
     const td_sysinfo_t *si = td_sysinfo();
-    if (!si->user_exists || !si->user_exists(name)) {
+    if (!si->user_exists || !si->user_exists(name))
+    {
         td_msgbox("Switch user", "There is no user with that name.", "OK", NULL, NULL);
         return;
     }
@@ -166,8 +199,10 @@ void td_session_init(void)
     td_settings_apply_saved();
     td_desktop_folder_init();
     td_wm_set_user_label(s_user);
-    if (s_started) return;
+    if (s_started)
+        return;
     s_started = true;
     td_timer_start(FOLLOW_MS, true, follow_shell, NULL, td_millis());
-    if (td_sysinfo()->authenticate) td_wm_add_start_item("Switch user...", switch_user_menu);
+    if (td_sysinfo()->authenticate)
+        td_wm_add_start_item("Switch user...", switch_user_menu);
 }

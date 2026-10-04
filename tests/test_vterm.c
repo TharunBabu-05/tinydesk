@@ -14,14 +14,21 @@ static void on_reply(void *user, const char *data, int len)
     s_reply[len] = '\0';
 }
 
-static void put(const char *s) { td_vterm_write(&s_vt, (const uint8_t *)s, (int)strlen(s)); }
+static void put(const char *s)
+{
+    td_vterm_write(&s_vt, (const uint8_t *)s, (int)strlen(s));
+}
 
-static char at(int x, int y) { return (char)s_vt.cells[y * TD_VT_MAX_COLS + x].ch; }
+static char at(int x, int y)
+{
+    return (char)s_vt.cells[y * TD_VT_MAX_COLS + x].ch;
+}
 
 static bool row_is(int y, const char *text)
 {
     for (int i = 0; text[i]; i++)
-        if (at(i, y) != text[i]) return false;
+        if (at(i, y) != text[i])
+            return false;
     return true;
 }
 

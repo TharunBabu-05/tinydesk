@@ -17,7 +17,8 @@ static void proto_poll(void *user)
 void td_proto_service_start(void)
 {
     static bool started;
-    if (started) return;
+    if (started)
+        return;
     started = true;
     td_timer_start(20, true, proto_poll, NULL, td_millis());
 }

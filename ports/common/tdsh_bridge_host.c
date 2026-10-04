@@ -36,10 +36,11 @@
 
 /* ------------------------------------------------------------ pipes */
 
-#define IN_PIPE_SIZE 1024
+#define IN_PIPE_SIZE  1024
 #define OUT_PIPE_SIZE 16384
 
-typedef struct {
+typedef struct
+{
 #ifdef _WIN32
     CRITICAL_SECTION cs;
     CONDITION_VARIABLE cv;
@@ -53,8 +54,8 @@ typedef struct {
 
 static uint8_t s_in_buf[IN_PIPE_SIZE];
 static uint8_t s_out_buf[OUT_PIPE_SIZE];
-static bpipe_t s_in = { .buf = s_in_buf, .cap = IN_PIPE_SIZE };
-static bpipe_t s_out = { .buf = s_out_buf, .cap = OUT_PIPE_SIZE };
+static bpipe_t s_in = {.buf = s_in_buf, .cap = IN_PIPE_SIZE};
+static bpipe_t s_out = {.buf = s_out_buf, .cap = OUT_PIPE_SIZE};
 
 static void pipe_init(bpipe_t *p)
 {
@@ -68,22 +69,23 @@ static void pipe_init(bpipe_t *p)
 }
 
 #ifdef _WIN32
-#define LOCK(p) EnterCriticalSection(&(p)->cs)
+#define LOCK(p)   EnterCriticalSection(&(p)->cs)
 #define UNLOCK(p) LeaveCriticalSection(&(p)->cs)
-#define WAIT(p) SleepConditionVariableCS(&(p)->cv, &(p)->cs, INFINITE)
-#define WAKE(p) WakeAllConditionVariable(&(p)->cv)
+#define WAIT(p)   SleepConditionVariableCS(&(p)->cv, &(p)->cs, INFINITE)
+#define WAKE(p)   WakeAllConditionVariable(&(p)->cv)
 #else
-#define LOCK(p) pthread_mutex_lock(&(p)->mu)
+#define LOCK(p)   pthread_mutex_lock(&(p)->mu)
 #define UNLOCK(p) pthread_mutex_unlock(&(p)->mu)
-#define WAIT(p) pthread_cond_wait(&(p)->cv, &(p)->mu)
-#define WAKE(p) pthread_cond_broadcast(&(p)->cv)
+#define WAIT(p)   pthread_cond_wait(&(p)->cv, &(p)->mu)
+#define WAKE(p)   pthread_cond_broadcast(&(p)->cv)
 #endif
 
 /* Copy up to len bytes in; returns the count. Caller holds the lock. */
 static int put_locked(bpipe_t *p, const uint8_t *data, int len)
 {
     int n = 0;
-    while (n < len && p->count < p->cap) {
+    while (n < len && p->count < p->cap)
+    {
         p->buf[(p->head + p->count) % p->cap] = data[n++];
         p->count++;
     }
@@ -93,7 +95,8 @@ static int put_locked(bpipe_t *p, const uint8_t *data, int len)
 static int take_locked(bpipe_t *p, uint8_t *out, int len)
 {
     int n = 0;
-    while (n < len && p->count > 0) {
+    while (n < len && p->count > 0)
+    {
         out[n++] = p->buf[p->head];
         p->head = (p->head + 1) % p->cap;
         p->count--;
@@ -105,8 +108,10 @@ static int take_locked(bpipe_t *p, uint8_t *out, int len)
 static void pipe_write_all(bpipe_t *p, const uint8_t *data, int len)
 {
     LOCK(p);
-    while (len > 0) {
-        while (p->count == p->cap) WAIT(p);
+    while (len > 0)
+    {
+        while (p->count == p->cap)
+            WAIT(p);
         int n = put_locked(p, data, len);
         data += n;
         len -= n;
@@ -119,7 +124,8 @@ static void pipe_write_all(bpipe_t *p, const uint8_t *data, int len)
 static int pipe_read_some(bpipe_t *p, uint8_t *out, int len)
 {
     LOCK(p);
-    while (p->count == 0) WAIT(p);
+    while (p->count == 0)
+        WAIT(p);
     int n = take_locked(p, out, len);
     WAKE(p);
     UNLOCK(p);
@@ -131,7 +137,8 @@ static int pipe_try_write(bpipe_t *p, const uint8_t *data, int len)
 {
     LOCK(p);
     int n = put_locked(p, data, len);
-    if (n) WAKE(p);
+    if (n)
+        WAKE(p);
     UNLOCK(p);
     return n;
 }
@@ -140,7 +147,8 @@ static int pipe_try_read(bpipe_t *p, uint8_t *out, int len)
 {
     LOCK(p);
     int n = take_locked(p, out, len);
-    if (n) WAKE(p);
+    if (n)
+        WAKE(p);
     UNLOCK(p);
     return n;
 }
@@ -161,14 +169,20 @@ static int stream_write(void *cookie, const char *buf, int len)
 }
 
 #if defined(__GLIBC__)
-static ssize_t cookie_read(void *c, char *buf, size_t len) { return stream_read(c, buf, (int)len); }
-static ssize_t cookie_write(void *c, const char *buf, size_t len) { return stream_write(c, buf, (int)len); }
+static ssize_t cookie_read(void *c, char *buf, size_t len)
+{
+    return stream_read(c, buf, (int)len);
+}
+static ssize_t cookie_write(void *c, const char *buf, size_t len)
+{
+    return stream_write(c, buf, (int)len);
+}
 #endif
 
 static FILE *open_terminal_stream(void)
 {
 #if defined(__GLIBC__)
-    cookie_io_functions_t fns = { .read = cookie_read, .write = cookie_write };
+    cookie_io_functions_t fns = {.read = cookie_read, .write = cookie_write};
     return fopencookie(NULL, "r+", fns);
 #else
     return funopen(NULL, stream_read, stream_write, NULL, NULL);
@@ -189,7 +203,7 @@ static int term_write(void *ctx, const void *data, size_t len)
     return 0;
 }
 
-static const tdsh_terminal_io_t s_term_io = { NULL, term_read_byte, term_write };
+static const tdsh_terminal_io_t s_term_io = {NULL, term_read_byte, term_write};
 
 /* ------------------------------------------------------ shell thread */
 
@@ -197,16 +211,22 @@ static char s_fs_root[TD_PATH_MAX];
 static char s_hostname[32];
 static int s_init_rc = -1;
 
-static void say(const char *s) { pipe_write_all(&s_out, (const uint8_t *)s, (int)strlen(s)); }
+static void say(const char *s)
+{
+    pipe_write_all(&s_out, (const uint8_t *)s, (int)strlen(s));
+}
 
 static void build_prompt(const tdsh_session_t *s, char *out, size_t cap)
 {
     const char *shown = s->cwd;
     char tilde[TDSH_MAX_PATH + 2];
     size_t hl = strlen(s->home);
-    if (strcmp(s->cwd, s->home) == 0) {
+    if (strcmp(s->cwd, s->home) == 0)
+    {
         shown = "~";
-    } else if (strncmp(s->cwd, s->home, hl) == 0 && s->cwd[hl] == '/') {
+    }
+    else if (strncmp(s->cwd, s->home, hl) == 0 && s->cwd[hl] == '/')
+    {
         snprintf(tilde, sizeof(tilde), "~%s", s->cwd + hl);
         shown = tilde;
     }
@@ -217,9 +237,11 @@ static void build_prompt(const tdsh_session_t *s, char *out, size_t cap)
 static void run_sessions(void)
 {
     static tdsh_session_t session;   /* large: keep it off the stack */
-    for (;;) {
+    for (;;)
+    {
         memset(&session, 0, sizeof(session));
-        if (tdsh_session_init(&session, "root", true) != 0) {
+        if (tdsh_session_init(&session, "root", true) != 0)
+        {
             say("shell: cannot create a session\r\n");
             return;
         }
@@ -228,20 +250,27 @@ static void run_sessions(void)
         say("\033[2J\033[H\033[1;36mTinyDesk Shell " TDSH_VERSION "\033[0m running inside TinyDesk\r\n");
         say("Type 'help' for commands, 'exit' to restart the session.\r\n\r\n");
 
-        for (;;) {
+        for (;;)
+        {
             char prompt[TDSH_MAX_PATH + 96];
             char line[TDSH_MAX_LINE + 1];
             build_prompt(&session, prompt, sizeof(prompt));
             int n = tdsh_terminal_readline(&session, &s_term_io, prompt, line, sizeof(line));
-            if (n < 0) return;
-            if (strcmp(line, "exit") == 0 || strcmp(line, "logout") == 0) break;
-            if (n > 0) tdsh_execute_line(&session, line);
-            if (session.logout_requested) break;
+            if (n < 0)
+                return;
+            if (strcmp(line, "exit") == 0 || strcmp(line, "logout") == 0)
+                break;
+            if (n > 0)
+                tdsh_execute_line(&session, line);
+            if (session.logout_requested)
+                break;
         }
         say("\r\n[session ended - press Enter for a new one]\r\n");
         uint8_t c = 0;
-        while (c != '\r' && c != '\n') {
-            if (term_read_byte(NULL, &c) != 0) return;
+        while (c != '\r' && c != '\n')
+        {
+            if (term_read_byte(NULL, &c) != 0)
+                return;
         }
     }
 }
@@ -257,7 +286,8 @@ static void shell_main(void)
     cfg.fs_root = s_fs_root;
     s_init_rc = tdsh_posix_init(&cfg);
 #endif
-    if (s_init_rc != 0) {
+    if (s_init_rc != 0)
+    {
         char msg[96];
         snprintf(msg, sizeof(msg), "The shell failed to start (error %d)\r\n", s_init_rc);
         say(msg);
@@ -267,7 +297,8 @@ static void shell_main(void)
 
     /* Everything the shell prints goes to the Terminal window. */
     FILE *io = open_terminal_stream();
-    if (!io) {
+    if (!io)
+    {
         say("shell: cannot open terminal stream\r\n");
         return;
     }
@@ -303,16 +334,19 @@ static int backend_start(void *ctx, int cols, int rows)
     (void)ctx;
     (void)cols;
     (void)rows;
-    if (s_started) return 0;
+    if (s_started)
+        return 0;
     pipe_init(&s_in);
     pipe_init(&s_out);
 #ifdef _WIN32
     HANDLE h = CreateThread(NULL, 1u << 20, shell_thread, NULL, 0, NULL);
-    if (!h) return -1;
+    if (!h)
+        return -1;
     CloseHandle(h);
 #else
     pthread_t t;
-    if (pthread_create(&t, NULL, shell_thread, NULL) != 0) return -1;
+    if (pthread_create(&t, NULL, shell_thread, NULL) != 0)
+        return -1;
     pthread_detach(t);
 #endif
     s_started = true;

@@ -23,7 +23,14 @@
 /* TD_EV_PASTE: text pasted in the terminal (bracketed paste); read it with
  * td_paste_text() while the event is being handled. x is 1 if the paste
  * was longer than TD_PASTE_MAX and got cut. */
-typedef enum { TD_EV_KEY, TD_EV_MOUSE, TD_EV_RESIZE, TD_EV_TICK, TD_EV_PASTE } td_ev_type_t;
+typedef enum
+{
+    TD_EV_KEY,
+    TD_EV_MOUSE,
+    TD_EV_RESIZE,
+    TD_EV_TICK,
+    TD_EV_PASTE
+} td_ev_type_t;
 
 /* Modifier bits. */
 #define TD_MOD_SHIFT 0x01u
@@ -46,7 +53,8 @@ typedef enum { TD_EV_KEY, TD_EV_MOUSE, TD_EV_RESIZE, TD_EV_TICK, TD_EV_PASTE } t
 
 /* Special keys live above the Unicode range so they never collide with a
  * character. Ctrl+letter arrives as the lower-case letter with TD_MOD_CTRL. */
-enum {
+enum
+{
     TD_KEY_BASE = 0x110000,
     TD_KEY_ENTER,
     TD_KEY_TAB,
@@ -62,11 +70,22 @@ enum {
     TD_KEY_DELETE,
     TD_KEY_PGUP,
     TD_KEY_PGDN,
-    TD_KEY_F1, TD_KEY_F2, TD_KEY_F3, TD_KEY_F4, TD_KEY_F5, TD_KEY_F6,
-    TD_KEY_F7, TD_KEY_F8, TD_KEY_F9, TD_KEY_F10, TD_KEY_F11, TD_KEY_F12,
+    TD_KEY_F1,
+    TD_KEY_F2,
+    TD_KEY_F3,
+    TD_KEY_F4,
+    TD_KEY_F5,
+    TD_KEY_F6,
+    TD_KEY_F7,
+    TD_KEY_F8,
+    TD_KEY_F9,
+    TD_KEY_F10,
+    TD_KEY_F11,
+    TD_KEY_F12,
 };
 
-typedef struct {
+typedef struct
+{
     td_ev_type_t type;
     uint32_t key;      /* Unicode char or TD_KEY_* code */
     uint8_t mods;      /* TD_MOD_SHIFT | TD_MOD_ALT | TD_MOD_CTRL */
@@ -97,7 +116,8 @@ void td_event_clear(void);
 /* ------------------------------------------------------------- parser */
 
 /* Parser state. Treat the fields as private. */
-typedef struct {
+typedef struct
+{
     uint8_t state;
     uint8_t seq[32];          /* bytes of the current escape sequence */
     uint8_t seq_len;

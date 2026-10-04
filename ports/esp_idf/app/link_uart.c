@@ -21,10 +21,10 @@
 #include "rs485.h"
 #include "tdsh_board.h"
 
-#define LINK_UART s_uart
+#define LINK_UART    s_uart
 #define DEFAULT_BAUD 921600
-#define RX_BUFFER 8192          /* a paste arrives at ~90 KB/s; hold one while a frame is drawn */
-#define TX_BUFFER 4096          /* one frame; the UART drains it in ~45 ms */
+#define RX_BUFFER    8192          /* a paste arrives at ~90 KB/s; hold one while a frame is drawn */
+#define TX_BUFFER    4096          /* one frame; the UART drains it in ~45 ms */
 
 static const char *TAG = "link_uart";
 static uart_port_t s_uart = UART_NUM_0;
@@ -36,7 +36,8 @@ bool link_init(void)
     int u = tdsh_board_int("console.uart", 0);
     s_uart = u >= 0 && u < UART_NUM_MAX ? (uart_port_t)u : UART_NUM_0;
     s_baud = tdsh_board_int("console.baud", DEFAULT_BAUD);
-    if (s_baud < 9600) s_baud = DEFAULT_BAUD;
+    if (s_baud < 9600)
+        s_baud = DEFAULT_BAUD;
     int tx = tdsh_board_int("console.tx", -1), rx = tdsh_board_int("console.rx", -1);
     snprintf(s_platform, sizeof(s_platform), "ESP32 (UART%d, %d baud)", (int)s_uart, s_baud);
     uart_config_t cfg = {
@@ -48,11 +49,13 @@ bool link_init(void)
         .source_clk = UART_SCLK_DEFAULT,
     };
     esp_err_t err = uart_driver_install(LINK_UART, RX_BUFFER, TX_BUFFER, 0, NULL, 0);
-    if (err == ESP_OK) err = uart_param_config(LINK_UART, &cfg);
+    if (err == ESP_OK)
+        err = uart_param_config(LINK_UART, &cfg);
     if (err == ESP_OK)
         err = uart_set_pin(LINK_UART, tx >= 0 ? tx : UART_PIN_NO_CHANGE, rx >= 0 ? rx : UART_PIN_NO_CHANGE,
                            UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);   /* default: TX1 / RX3 on UART0 */
-    if (err != ESP_OK) {
+    if (err != ESP_OK)
+    {
         ESP_LOGE(TAG, "UART%d setup failed: %s", (int)s_uart, esp_err_to_name(err));
         return false;
     }
@@ -62,8 +65,10 @@ bool link_init(void)
 int link_read(uint8_t *buf, int cap)
 {
     size_t avail = 0;
-    if (uart_get_buffered_data_len(LINK_UART, &avail) != ESP_OK || avail == 0) return 0;
-    if (avail > (size_t)cap) avail = (size_t)cap;
+    if (uart_get_buffered_data_len(LINK_UART, &avail) != ESP_OK || avail == 0)
+        return 0;
+    if (avail > (size_t)cap)
+        avail = (size_t)cap;
     int n = uart_read_bytes(LINK_UART, buf, (uint32_t)avail, 0);
     return n > 0 ? n : 0;
 }
@@ -76,6 +81,15 @@ int link_write(const uint8_t *buf, int len)
     return n > 0 ? n : 0;
 }
 
-const char *board_platform(void) { return s_platform; }
-const char *board_hostname(void) { return "esp32"; }
-const td_mb_serial_t *board_rtu_lines(void) { return rs485_serial(); }
+const char *board_platform(void)
+{
+    return s_platform;
+}
+const char *board_hostname(void)
+{
+    return "esp32";
+}
+const td_mb_serial_t *board_rtu_lines(void)
+{
+    return rs485_serial();
+}

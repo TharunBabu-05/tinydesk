@@ -24,7 +24,8 @@
 static bool settings_load(void *data, int len)
 {
     FILE *f = fopen(SETTINGS_FILE, "rb");
-    if (!f) return false;
+    if (!f)
+        return false;
     bool ok = fread(data, 1, (size_t)len, f) == (size_t)len;
     fclose(f);
     return ok;
@@ -33,7 +34,8 @@ static bool settings_load(void *data, int len)
 static bool settings_save(const void *data, int len)
 {
     FILE *f = fopen(SETTINGS_FILE, "wb");
-    if (!f) return false;
+    if (!f)
+        return false;
     bool ok = fwrite(data, 1, (size_t)len, f) == (size_t)len;
     return fclose(f) == 0 && ok;
 }
@@ -61,19 +63,25 @@ static long s_tz;
 static uint32_t s_tz_read_ms;
 static bool s_tz_valid;
 
-static void tz_path(char *out, size_t cap) { snprintf(out, cap, "%.400s/.tdsh_tz", td_session_home()); }
+static void tz_path(char *out, size_t cap)
+{
+    snprintf(out, cap, "%.400s/.tdsh_tz", td_session_home());
+}
 
 static bool get_tz(long *seconds)
 {
     uint32_t now = td_millis();
-    if (!s_tz_valid || strcmp(s_tz_user, td_session_user()) != 0 || now - s_tz_read_ms > 5000) {
+    if (!s_tz_valid || strcmp(s_tz_user, td_session_user()) != 0 || now - s_tz_read_ms > 5000)
+    {
         char path[420];
         tz_path(path, sizeof(path));
         snprintf(s_tz_user, sizeof(s_tz_user), "%s", td_session_user());
         s_tz = pc_offset();
         FILE *f = fopen(path, "r");
-        if (f) {
-            if (fscanf(f, "%ld", &s_tz) != 1) s_tz = pc_offset();
+        if (f)
+        {
+            if (fscanf(f, "%ld", &s_tz) != 1)
+                s_tz = pc_offset();
             fclose(f);
         }
         s_tz_read_ms = now;
@@ -88,7 +96,8 @@ static bool set_tz(long seconds)
     char path[420];
     tz_path(path, sizeof(path));
     FILE *f = fopen(path, "w");
-    if (!f) return false;
+    if (!f)
+        return false;
     fprintf(f, "%ld\n", seconds);
     s_tz_valid = false;
     return fclose(f) == 0;
@@ -96,7 +105,10 @@ static bool set_tz(long seconds)
 
 static td_sysinfo_t s_info;
 
-void td_host_use_net(const td_net_ops_t *net) { s_info.net = net; }
+void td_host_use_net(const td_net_ops_t *net)
+{
+    s_info.net = net;
+}
 
 void td_host_use_users(bool (*exists)(const char *), bool (*auth)(const char *, const char *))
 {
@@ -107,14 +119,18 @@ void td_host_use_users(bool (*exists)(const char *), bool (*auth)(const char *, 
 static void welcome_done(int button, void *user)
 {
     (void)user;
-    if (button == 0) td_app_launch("Terminal");
+    if (button == 0)
+        td_app_launch("Terminal");
 }
 
 void td_host_setup(const td_hal_t *hal, const char *platform_name)
 {
     static char fs_root[512];
-    if (!getcwd(fs_root, sizeof(fs_root) - 16)) snprintf(fs_root, sizeof(fs_root), ".");
-    for (char *p = fs_root; *p; p++) if (*p == '\\') *p = '/';
+    if (!getcwd(fs_root, sizeof(fs_root) - 16))
+        snprintf(fs_root, sizeof(fs_root), ".");
+    for (char *p = fs_root; *p; p++)
+        if (*p == '\\')
+            *p = '/';
     strcat(fs_root, "/tinydesk_fs");
 
     s_info.platform = platform_name;
@@ -148,7 +164,8 @@ void td_host_setup(const td_hal_t *hal, const char *platform_name)
 int td_host_main(const char *platform_name)
 {
     const td_hal_t *hal = td_host_hal_open();
-    if (!hal) {
+    if (!hal)
+    {
         fprintf(stderr, "TinyDesk needs an interactive terminal (Windows Terminal, xterm, ...).\n");
         return 1;
     }

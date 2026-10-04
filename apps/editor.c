@@ -29,13 +29,14 @@
 #ifndef TD_EDITOR_UNDO
 #define TD_EDITOR_UNDO 6144      /* bytes of undo text kept */
 #endif
-#define UNDO_OPS 128
-#define PATH_LEN TD_PATH_MAX
+#define UNDO_OPS        128
+#define PATH_LEN        TD_PATH_MAX
 #define DOUBLE_CLICK_MS 400
 
 /* One recorded change. Undo walks back one group (a user action: a typed
  * word, a paste, a cut...) at a time. */
-typedef struct {
+typedef struct
+{
     int pos, len;        /* where, how many bytes */
     int text;            /* offset of the bytes in the pool */
     int cur;             /* cursor before the action */
@@ -43,9 +44,16 @@ typedef struct {
     bool ins;            /* insertion (else deletion) */
 } undo_op_t;
 
-typedef enum { K_OTHER, K_TYPE, K_BACKSPACE, K_DELETE } edit_kind_t;
+typedef enum
+{
+    K_OTHER,
+    K_TYPE,
+    K_BACKSPACE,
+    K_DELETE
+} edit_kind_t;
 
-typedef struct {
+typedef struct
+{
     undo_op_t ops[UNDO_OPS];
     int n;               /* ops recorded */
     int top;             /* ops applied; ops[top..n) can be redone */
@@ -59,7 +67,8 @@ typedef struct {
     uint16_t broken;     /* group that did not fit: record none of it */
 } undo_t;
 
-typedef struct {
+typedef struct
+{
     char *buf;
     int len;
     int cur;            /* cursor as a byte offset */
@@ -84,7 +93,10 @@ typedef struct {
 static editor_t E;
 static td_window_t *s_win;
 
-static const td_fs_ops_t *fs(void) { return td_sysinfo()->fs; }
+static const td_fs_ops_t *fs(void)
+{
+    return td_sysinfo()->fs;
+}
 
 static void set_status(const char *msg)
 {
@@ -95,7 +107,8 @@ static void set_status(const char *msg)
 
 static const char *file_name(void)
 {
-    if (!E.path[0]) return "untitled";
+    if (!E.path[0])
+        return "untitled";
     const char *slash = strrchr(E.path, '/');
     return slash ? slash + 1 : E.path;
 }
@@ -116,7 +129,8 @@ static int s_clip_len;
 bool td_clipboard_set(const char *text, int len)
 {
     char *copy = malloc((size_t)len + 1);
-    if (!copy) return false;
+    if (!copy)
+        return false;
     memcpy(copy, text, (size_t)len);
     copy[len] = '\0';
     free(s_clip);
@@ -127,7 +141,8 @@ bool td_clipboard_set(const char *text, int len)
 
 const char *td_clipboard_get(int *len)
 {
-    if (len) *len = s_clip ? s_clip_len : 0;
+    if (len)
+        *len = s_clip ? s_clip_len : 0;
     return s_clip;
 }
 
@@ -140,33 +155,42 @@ void td_clipboard_clear(void)
 
 /* ------------------------------------------------ positions in the text */
 
-static bool is_cont(char c) { return ((unsigned char)c & 0xC0u) == 0x80u; }
+static bool is_cont(char c)
+{
+    return ((unsigned char)c & 0xC0u) == 0x80u;
+}
 
 static int next_pos(int p)
 {
-    if (p >= E.len) return E.len;
+    if (p >= E.len)
+        return E.len;
     p++;
-    while (p < E.len && is_cont(E.buf[p])) p++;
+    while (p < E.len && is_cont(E.buf[p]))
+        p++;
     return p;
 }
 
 static int prev_pos(int p)
 {
-    if (p <= 0) return 0;
+    if (p <= 0)
+        return 0;
     p--;
-    while (p > 0 && is_cont(E.buf[p])) p--;
+    while (p > 0 && is_cont(E.buf[p]))
+        p--;
     return p;
 }
 
 static int line_start(int p)
 {
-    while (p > 0 && E.buf[p - 1] != '\n') p--;
+    while (p > 0 && E.buf[p - 1] != '\n')
+        p--;
     return p;
 }
 
 static int line_end(int p)
 {
-    while (p < E.len && E.buf[p] != '\n') p++;
+    while (p < E.len && E.buf[p] != '\n')
+        p++;
     return p;
 }
 
@@ -175,7 +199,8 @@ static int col_of(int p)
 {
     int c = 0;
     for (int i = line_start(p); i < p; i++)
-        if (!is_cont(E.buf[i])) c++;
+        if (!is_cont(E.buf[i]))
+            c++;
     return c;
 }
 
@@ -183,19 +208,25 @@ static int line_of(int p)
 {
     int n = 0;
     for (int i = 0; i < p; i++)
-        if (E.buf[i] == '\n') n++;
+        if (E.buf[i] == '\n')
+            n++;
     return n;
 }
 
-static int line_count(void) { return line_of(E.len) + 1; }
+static int line_count(void)
+{
+    return line_of(E.len) + 1;
+}
 
 /* Start of line n (clamped to the last line). */
 static int nth_line(int n)
 {
     int p = 0;
-    for (int line = 0; line < n; line++) {
+    for (int line = 0; line < n; line++)
+    {
         int e = line_end(p);
-        if (e >= E.len) break;
+        if (e >= E.len)
+            break;
         p = e + 1;
     }
     return p;
@@ -205,7 +236,8 @@ static int nth_line(int n)
 static int at_col(int ls, int col)
 {
     int p = ls, e = line_end(ls);
-    for (int c = 0; c < col && p < e; c++) p = next_pos(p);
+    for (int c = 0; c < col && p < e; c++)
+        p = next_pos(p);
     return p;
 }
 
@@ -218,21 +250,28 @@ static bool word_char(char c)
 
 static int word_left(int p)
 {
-    while (p > 0 && !word_char(E.buf[p - 1])) p--;
-    while (p > 0 && word_char(E.buf[p - 1])) p--;
+    while (p > 0 && !word_char(E.buf[p - 1]))
+        p--;
+    while (p > 0 && word_char(E.buf[p - 1]))
+        p--;
     return p;
 }
 
 static int word_right(int p)
 {
-    while (p < E.len && word_char(E.buf[p])) p++;
-    while (p < E.len && !word_char(E.buf[p])) p++;
+    while (p < E.len && word_char(E.buf[p]))
+        p++;
+    while (p < E.len && !word_char(E.buf[p]))
+        p++;
     return p;
 }
 
 /* ---------------------------------------------------------- selection */
 
-static bool has_sel(void) { return E.anchor >= 0 && E.anchor != E.cur; }
+static bool has_sel(void)
+{
+    return E.anchor >= 0 && E.anchor != E.cur;
+}
 
 static void sel_range(int *a, int *b)
 {
@@ -246,7 +285,8 @@ static int sel_chars(void)
     int a, b, n = 0;
     sel_range(&a, &b);
     for (int i = a; i < b; i++)
-        if (!is_cont(E.buf[i])) n++;
+        if (!is_cont(E.buf[i]))
+            n++;
     return n;
 }
 
@@ -281,14 +321,16 @@ static void after_change(void)
 static void undo_drop_oldest(undo_t *u)
 {
     int k = 0;
-    while (k < u->n && u->ops[k].group == u->ops[0].group) k++;
+    while (k < u->n && u->ops[k].group == u->ops[0].group)
+        k++;
     int bytes = k < u->n ? u->ops[k].text : u->used;
     memmove(u->pool, u->pool + bytes, (size_t)(u->used - bytes));
     u->used -= bytes;
     memmove(u->ops, u->ops + k, (size_t)(u->n - k) * sizeof(undo_op_t));
     u->n -= k;
     u->top = u->top > k ? u->top - k : 0;
-    for (int i = 0; i < u->n; i++) u->ops[i].text -= bytes;
+    for (int i = 0; i < u->n; i++)
+        u->ops[i].text -= bytes;
     u->saved = u->saved >= k ? u->saved - k : -1;
 }
 
@@ -297,10 +339,13 @@ static void undo_drop_oldest(undo_t *u)
 static void undo_begin(edit_kind_t kind, bool space)
 {
     undo_t *u = E.undo;
-    if (!u) return;
+    if (!u)
+        return;
     bool join = u->merge && kind != K_OTHER && kind == u->kind && u->top == u->n && u->n > 0;
-    if (join && kind == K_TYPE && u->after_space && !space) join = false;   /* next word */
-    if (!join) u->group++;
+    if (join && kind == K_TYPE && u->after_space && !space)
+        join = false;   /* next word */
+    if (!join)
+        u->group++;
     u->kind = kind;
     u->after_space = space;
     u->merge = kind != K_OTHER;
@@ -309,13 +354,17 @@ static void undo_begin(edit_kind_t kind, bool space)
 static void undo_record(bool ins, int pos, const char *text, int len, int cur_before)
 {
     undo_t *u = E.undo;
-    if (!u || len <= 0 || u->broken == u->group) return;
-    if (u->top < u->n) {                      /* a new edit ends the redo chain */
+    if (!u || len <= 0 || u->broken == u->group)
+        return;
+    if (u->top < u->n)
+    {                      /* a new edit ends the redo chain */
         u->used = u->ops[u->top].text;
         u->n = u->top;
-        if (u->saved > u->top) u->saved = -1;
+        if (u->saved > u->top)
+            u->saved = -1;
     }
-    if (len > TD_EDITOR_UNDO) {               /* too big to keep: start over */
+    if (len > TD_EDITOR_UNDO)
+    {               /* too big to keep: start over */
         u->n = u->top = u->used = 0;
         u->saved = -1;
         u->broken = u->group;
@@ -325,27 +374,38 @@ static void undo_record(bool ins, int pos, const char *text, int len, int cur_be
     /* Extend the last op when this continues it. */
     undo_op_t *last = u->n > 0 ? &u->ops[u->n - 1] : NULL;
     if (last && last->group == u->group && last->ins == ins && last->text + last->len == u->used &&
-        u->used + len <= TD_EDITOR_UNDO) {
-        if (ins && last->pos + last->len == pos) {                       /* typing on */
+        u->used + len <= TD_EDITOR_UNDO)
+    {
+        if (ins && last->pos + last->len == pos)
+        {                       /* typing on */
             memcpy(u->pool + u->used, text, (size_t)len);
-        } else if (!ins && pos + len == last->pos) {                     /* Backspace */
+        }
+        else if (!ins && pos + len == last->pos)
+        {                     /* Backspace */
             memmove(u->pool + last->text + len, u->pool + last->text, (size_t)last->len);
             memcpy(u->pool + last->text, text, (size_t)len);
             last->pos = pos;
-        } else if (!ins && pos == last->pos) {                           /* Delete */
+        }
+        else if (!ins && pos == last->pos)
+        {                           /* Delete */
             memcpy(u->pool + u->used, text, (size_t)len);
-        } else {
+        }
+        else
+        {
             last = NULL;
         }
-        if (last) {
+        if (last)
+        {
             last->len += len;
             u->used += len;
             return;
         }
     }
 
-    while (u->n > 0 && (u->n >= UNDO_OPS || u->used + len > TD_EDITOR_UNDO)) {
-        if (u->ops[0].group == u->group) {    /* only this action is left */
+    while (u->n > 0 && (u->n >= UNDO_OPS || u->used + len > TD_EDITOR_UNDO))
+    {
+        if (u->ops[0].group == u->group)
+        {    /* only this action is left */
             u->n = u->top = u->used = 0;
             u->saved = -1;
             u->broken = u->group;
@@ -368,15 +428,19 @@ static void undo_record(bool ins, int pos, const char *text, int len, int cur_be
 static void undo(void)
 {
     undo_t *u = E.undo;
-    if (!u || u->top == 0) {
+    if (!u || u->top == 0)
+    {
         set_status("Nothing to undo");
         return;
     }
     uint16_t g = u->ops[u->top - 1].group;
-    while (u->top > 0 && u->ops[u->top - 1].group == g) {
+    while (u->top > 0 && u->ops[u->top - 1].group == g)
+    {
         const undo_op_t *op = &u->ops[--u->top];
-        if (op->ins) raw_erase(op->pos, op->pos + op->len);
-        else raw_insert(op->pos, u->pool + op->text, op->len);
+        if (op->ins)
+            raw_erase(op->pos, op->pos + op->len);
+        else
+            raw_insert(op->pos, u->pool + op->text, op->len);
         E.cur = op->cur;
     }
     u->merge = false;
@@ -387,17 +451,22 @@ static void undo(void)
 static void redo(void)
 {
     undo_t *u = E.undo;
-    if (!u || u->top == u->n) {
+    if (!u || u->top == u->n)
+    {
         set_status("Nothing to redo");
         return;
     }
     uint16_t g = u->ops[u->top].group;
-    while (u->top < u->n && u->ops[u->top].group == g) {
+    while (u->top < u->n && u->ops[u->top].group == g)
+    {
         const undo_op_t *op = &u->ops[u->top++];
-        if (op->ins) {
+        if (op->ins)
+        {
             raw_insert(op->pos, u->pool + op->text, op->len);
             E.cur = op->pos + op->len;
-        } else {
+        }
+        else
+        {
             raw_erase(op->pos, op->pos + op->len);
             E.cur = op->pos;
         }
@@ -411,14 +480,16 @@ static void redo(void)
 
 static bool writable(void)
 {
-    if (E.readonly) set_status("Read-only: the file is too large to edit");
+    if (E.readonly)
+        set_status("Read-only: the file is too large to edit");
     return !E.readonly;
 }
 
 /* Delete [from, to) as part of the current action. */
 static void erase_recorded(int from, int to)
 {
-    if (from >= to) return;
+    if (from >= to)
+        return;
     undo_record(false, from, E.buf + from, to - from, E.cur);
     raw_erase(from, to);
     E.cur = from;
@@ -427,7 +498,8 @@ static void erase_recorded(int from, int to)
 /* Delete the selection (if any) as part of the current action. */
 static void erase_selection(void)
 {
-    if (!has_sel()) return;
+    if (!has_sel())
+        return;
     int a, b;
     sel_range(&a, &b);
     erase_recorded(a, b);
@@ -437,17 +509,21 @@ static void erase_selection(void)
 /* Type or paste text, replacing the selection. */
 static void insert_text(const char *text, int n, edit_kind_t kind)
 {
-    if (!writable() || n <= 0) return;
+    if (!writable() || n <= 0)
+        return;
     int a = E.cur, b = E.cur;
-    if (has_sel()) sel_range(&a, &b);
-    if (E.len - (b - a) + n > TD_EDITOR_MAX) {
+    if (has_sel())
+        sel_range(&a, &b);
+    if (E.len - (b - a) + n > TD_EDITOR_MAX)
+    {
         set_status("The file is full");
         return;
     }
     bool space = n == 1 && (text[0] == ' ' || text[0] == '\n');
     bool replace = has_sel();
     undo_begin(replace ? K_OTHER : kind, space);
-    if (replace && kind == K_TYPE && E.undo) {    /* typing on joins this step */
+    if (replace && kind == K_TYPE && E.undo)
+    {    /* typing on joins this step */
         E.undo->kind = K_TYPE;
         E.undo->merge = true;
     }
@@ -462,14 +538,19 @@ static void insert_text(const char *text, int n, edit_kind_t kind)
 /* Backspace / Delete: the selection, or one character. */
 static void delete_key(bool backwards)
 {
-    if (!writable()) return;
-    if (has_sel()) {
+    if (!writable())
+        return;
+    if (has_sel())
+    {
         undo_begin(K_OTHER, false);
         erase_selection();
-    } else {
+    }
+    else
+    {
         int from = backwards ? prev_pos(E.cur) : E.cur;
         int to = backwards ? E.cur : next_pos(E.cur);
-        if (from >= to) return;
+        if (from >= to)
+            return;
         undo_begin(backwards ? K_BACKSPACE : K_DELETE, false);
         erase_recorded(from, to);
     }
@@ -478,26 +559,32 @@ static void delete_key(bool backwards)
 
 static void copy_selection(void)
 {
-    if (!has_sel()) {
+    if (!has_sel())
+    {
         set_status("Nothing selected");
         return;
     }
     int a, b;
     sel_range(&a, &b);
-    if (td_clipboard_set(E.buf + a, b - a)) {
+    if (td_clipboard_set(E.buf + a, b - a))
+    {
         td_host_clipboard_set(E.buf + a, b - a);    /* the PC's clipboard, where the terminal allows */
         char msg[32];
         snprintf(msg, sizeof(msg), "Copied %d characters", sel_chars());
         set_status(msg);
-    } else {
+    }
+    else
+    {
         set_status("Not enough memory to copy");
     }
 }
 
 static void cut_selection(void)
 {
-    if (!has_sel() || !writable()) {
-        if (!has_sel()) set_status("Nothing selected");
+    if (!has_sel() || !writable())
+    {
+        if (!has_sel())
+            set_status("Nothing selected");
         return;
     }
     copy_selection();
@@ -510,7 +597,8 @@ static void paste(void)
 {
     int n = 0;
     const char *text = td_clipboard_get(&n);
-    if (!text || n == 0) {
+    if (!text || n == 0)
+    {
         set_status("The clipboard is empty");
         return;
     }
@@ -523,18 +611,25 @@ static void paste_from_terminal(const td_event_t *ev)
 {
     int n = 0;
     const char *text = td_paste_text(&n);
-    if (!text || n <= 0) return;
+    if (!text || n <= 0)
+        return;
     char *buf = malloc((size_t)n);
-    if (!buf) {
+    if (!buf)
+    {
         set_status("Not enough memory to paste");
         return;
     }
     int m = 0;
-    for (int i = 0; i < n; i++) {
-        if (text[i] == '\r') {
+    for (int i = 0; i < n; i++)
+    {
+        if (text[i] == '\r')
+        {
             buf[m++] = '\n';
-            if (i + 1 < n && text[i + 1] == '\n') i++;
-        } else if (text[i] != '\0') {
+            if (i + 1 < n && text[i + 1] == '\n')
+                i++;
+        }
+        else if (text[i] != '\0')
+        {
             buf[m++] = text[i];
         }
     }
@@ -557,8 +652,10 @@ static void select_all(void)
 static void move_lines(int delta)
 {
     int line = line_of(E.cur) + delta;
-    if (line < 0) line = 0;
-    if (line >= line_count()) line = line_count() - 1;
+    if (line < 0)
+        line = 0;
+    if (line >= line_count())
+        line = line_count() - 1;
     E.cur = at_col(nth_line(line), E.goal_col);
 }
 
@@ -569,16 +666,20 @@ static bool load(const char *path)
     E.len = 0;
     E.buf[0] = '\0';
     E.readonly = false;
-    if (!path || !path[0]) return true;
+    if (!path || !path[0])
+        return true;
     int n = fs()->read(path, E.buf, TD_EDITOR_MAX + 1);
-    if (n < 0) return false;
-    if (n > TD_EDITOR_MAX) {
+    if (n < 0)
+        return false;
+    if (n > TD_EDITOR_MAX)
+    {
         n = TD_EDITOR_MAX;
         E.readonly = true;
     }
     int out = 0;
     for (int i = 0; i < n; i++)
-        if (E.buf[i] != '\r') E.buf[out++] = E.buf[i];
+        if (E.buf[i] != '\r')
+            E.buf[out++] = E.buf[i];
     E.len = out;
     E.buf[E.len] = '\0';
     return true;
@@ -592,14 +693,17 @@ static void close_now(void)
 
 static bool save_to(const char *path)
 {
-    if (fs()->write(path, E.buf, E.len) != 0) {
+    if (fs()->write(path, E.buf, E.len) != 0)
+    {
         set_status("Save failed");
         return false;
     }
     /* save() passes E.path itself; copying a string onto itself is
      * undefined (glibc empties it, and the next save asks for a name). */
-    if (path != E.path) snprintf(E.path, sizeof(E.path), "%s", path);
-    if (E.undo) {
+    if (path != E.path)
+        snprintf(E.path, sizeof(E.path), "%s", path);
+    if (E.undo)
+    {
         E.undo->saved = E.undo->top;
         E.undo->merge = false;       /* typing after a save is a new step */
     }
@@ -607,7 +711,8 @@ static bool save_to(const char *path)
     update_title();
     set_status("Saved");
     td_desktop_refresh();
-    if (E.close_after_save) close_now();
+    if (E.close_after_save)
+        close_now();
     return true;
 }
 
@@ -615,13 +720,15 @@ static void save_as_answer(const char *name, void *user)
 {
     (void)user;
     char path[PATH_LEN];
-    if (!td_valid_name(name)) {
+    if (!td_valid_name(name))
+    {
         set_status("Invalid file name");
         E.close_after_save = false;
         return;
     }
     snprintf(path, sizeof(path), "%s/%s", td_desktop_dir(), name);
-    if (fs()->exists && fs()->exists(path)) {
+    if (fs()->exists && fs()->exists(path))
+    {
         set_status("A file with that name already exists");
         E.close_after_save = false;
         return;
@@ -631,21 +738,27 @@ static void save_as_answer(const char *name, void *user)
 
 static void save(void)
 {
-    if (E.readonly) {
+    if (E.readonly)
+    {
         set_status("Read-only: not saved");
         return;
     }
-    if (E.path[0]) save_to(E.path);
-    else td_inputbox("Save as", "File name (saved on the Desktop):", "untitled.txt", save_as_answer, NULL);
+    if (E.path[0])
+        save_to(E.path);
+    else
+        td_inputbox("Save as", "File name (saved on the Desktop):", "untitled.txt", save_as_answer, NULL);
 }
 
 static void unsaved_answer(int button, void *user)
 {
     (void)user;
-    if (button == 0) {          /* Save */
+    if (button == 0)
+    {          /* Save */
         E.close_after_save = true;
         save();
-    } else if (button == 1) {   /* Discard */
+    }
+    else if (button == 1)
+    {   /* Discard */
         close_now();
     }
 }
@@ -654,7 +767,8 @@ static void unsaved_answer(int button, void *user)
 static bool on_close_request(td_window_t *win)
 {
     (void)win;
-    if (!E.modified) return true;
+    if (!E.modified)
+        return true;
     char text[TD_TEXT_MAX];
     snprintf(text, sizeof(text), "Save changes to %.24s?", file_name());
     td_msgbox("Editor", text, "Save|Discard|Cancel", unsaved_answer, NULL);
@@ -670,34 +784,47 @@ static void on_draw(td_window_t *win, int w, int h)
     E.view_rows = rows > 1 ? rows : 1;
     int cl = line_of(E.cur), cc = col_of(E.cur);
 
-    if (E.follow) {
-        if (cl < E.top) E.top = cl;
-        if (cl >= E.top + E.view_rows) E.top = cl - E.view_rows + 1;
-        if (cc < E.left) E.left = cc;
-        if (cc >= E.left + w) E.left = cc - w + 1;
+    if (E.follow)
+    {
+        if (cl < E.top)
+            E.top = cl;
+        if (cl >= E.top + E.view_rows)
+            E.top = cl - E.view_rows + 1;
+        if (cc < E.left)
+            E.left = cc;
+        if (cc >= E.left + w)
+            E.left = cc - w + 1;
         E.follow = false;
     }
 
     int sa = 0, sb = 0;
-    if (has_sel()) sel_range(&sa, &sb);
+    if (has_sel())
+        sel_range(&sa, &sb);
 
     td_fill(td_rect(0, 0, w, rows), ' ', t->input_fg, t->input_bg);
     int p = nth_line(E.top);
-    for (int row = 0; row < rows; row++) {
-        if (E.top + row >= line_count()) break;
+    for (int row = 0; row < rows; row++)
+    {
+        if (E.top + row >= line_count())
+            break;
         int e = line_end(p);
         const char *s = E.buf + p;
         int col = 0;
-        while (s < E.buf + e) {
+        while (s < E.buf + e)
+        {
             int at = (int)(s - E.buf);
             uint32_t cp = td_utf8_next(&s);
-            if (cp == 0) {              /* a NUL byte: show it, step over it */
+            if (cp == 0)
+            {              /* a NUL byte: show it, step over it */
                 cp = '?';
                 s++;
             }
-            if (s > E.buf + e) break;
-            if (cp == '\t') cp = ' ';
-            else if (cp < 0x20u) cp = '?';
+            if (s > E.buf + e)
+                break;
+            if (cp == '\t')
+                cp = ' ';
+            else if (cp < 0x20u)
+                cp = '?';
             bool sel = at >= sa && at < sb;
             if (col >= E.left && col - E.left < w)
                 td_putc(col - E.left, row, cp, sel ? t->select_fg : t->input_fg, sel ? t->select_bg : t->input_bg, 0);
@@ -709,12 +836,15 @@ static void on_draw(td_window_t *win, int w, int h)
         p = e + 1;
     }
 
-    if (win == td_win_focused() && cl >= E.top && cl < E.top + rows && cc >= E.left && cc - E.left < w) {
+    if (win == td_win_focused() && cl >= E.top && cl < E.top + rows && cc >= E.left && cc - E.left < w)
+    {
         uint32_t ch = ' ';
-        if (E.cur < E.len && E.buf[E.cur] != '\n') {
+        if (E.cur < E.len && E.buf[E.cur] != '\n')
+        {
             const char *s = E.buf + E.cur;
             ch = td_utf8_next(&s);
-            if (ch < 0x20u) ch = ' ';
+            if (ch < 0x20u)
+                ch = ' ';
         }
         td_putc(cc - E.left, cl - E.top, ch, t->input_fg, t->input_bg, TD_REVERSE);
     }
@@ -722,7 +852,8 @@ static void on_draw(td_window_t *win, int w, int h)
     /* Status bar. */
     char bar[176], sel[24] = "";
     bool recent = E.status[0] && td_millis() - E.status_ms < 4000;
-    if (has_sel()) snprintf(sel, sizeof(sel), "  %d selected", sel_chars());
+    if (has_sel())
+        snprintf(sel, sizeof(sel), "  %d selected", sel_chars());
     snprintf(bar, sizeof(bar), " Ln %d, Col %d%s%s  %s", cl + 1, cc + 1, sel, E.readonly ? "  [read-only]" : "",
              recent ? E.status : "^S Save  ^Z Undo  ^Y Redo  ^C Copy  ^X Cut  ^V Paste");
     td_fill(td_rect(0, rows, w, 1), ' ', t->title_inactive_fg, t->title_inactive_bg);
@@ -737,29 +868,57 @@ static bool on_key(const td_event_t *ev)
     bool ctrl = (ev->mods & TD_MOD_CTRL) != 0;
     bool shift = (ev->mods & TD_MOD_SHIFT) != 0;
 
-    if (ctrl && k >= 'a' && k <= 'z') {
-        switch (k) {
-        case 's': save(); return true;
-        case 'w': case 'q': td_win_request_close(s_win); return true;
-        case 'a': select_all(); return true;
-        case 'c': copy_selection(); return true;
-        case 'x': cut_selection(); return true;
-        case 'v': paste(); return true;
-        case 'z': if (shift) redo(); else undo(); return true;
-        case 'y': redo(); return true;
-        default: break;
+    if (ctrl && k >= 'a' && k <= 'z')
+    {
+        switch (k)
+        {
+        case 's':
+            save();
+            return true;
+        case 'w':
+        case 'q':
+            td_win_request_close(s_win);
+            return true;
+        case 'a':
+            select_all();
+            return true;
+        case 'c':
+            copy_selection();
+            return true;
+        case 'x':
+            cut_selection();
+            return true;
+        case 'v':
+            paste();
+            return true;
+        case 'z':
+            if (shift)
+                redo();
+            else
+                undo();
+            return true;
+        case 'y':
+            redo();
+            return true;
+        default:
+            break;
         }
     }
-    if (k == TD_KEY_ESC) {
+    if (k == TD_KEY_ESC)
+    {
         td_win_request_close(s_win);
         return true;
     }
-    if (k == TD_KEY_INSERT) {
-        if (ctrl) copy_selection();
-        else if (shift) paste();
+    if (k == TD_KEY_INSERT)
+    {
+        if (ctrl)
+            copy_selection();
+        else if (shift)
+            paste();
         return true;
     }
-    if (k == TD_KEY_DELETE && shift) {
+    if (k == TD_KEY_DELETE && shift)
+    {
         cut_selection();
         return true;
     }
@@ -769,44 +928,85 @@ static bool on_key(const td_event_t *ev)
     int before = E.cur;
     bool sel = has_sel();
     int sa = 0, sb = 0;
-    if (sel) sel_range(&sa, &sb);
-    switch (k) {
+    if (sel)
+        sel_range(&sa, &sb);
+    switch (k)
+    {
     case TD_KEY_LEFT:
-        if (sel && !shift) E.cur = sa;
-        else E.cur = ctrl ? word_left(E.cur) : prev_pos(E.cur);
+        if (sel && !shift)
+            E.cur = sa;
+        else
+            E.cur = ctrl ? word_left(E.cur) : prev_pos(E.cur);
         break;
     case TD_KEY_RIGHT:
-        if (sel && !shift) E.cur = sb;
-        else E.cur = ctrl ? word_right(E.cur) : next_pos(E.cur);
+        if (sel && !shift)
+            E.cur = sb;
+        else
+            E.cur = ctrl ? word_right(E.cur) : next_pos(E.cur);
         break;
-    case TD_KEY_UP: move_lines(-1); keep_goal = true; break;
-    case TD_KEY_DOWN: move_lines(1); keep_goal = true; break;
-    case TD_KEY_PGUP: move_lines(-E.view_rows); keep_goal = true; break;
-    case TD_KEY_PGDN: move_lines(E.view_rows); keep_goal = true; break;
-    case TD_KEY_HOME: E.cur = ctrl ? 0 : line_start(E.cur); break;
-    case TD_KEY_END: E.cur = ctrl ? E.len : line_end(E.cur); break;
-    default: moved = false; break;
+    case TD_KEY_UP:
+        move_lines(-1);
+        keep_goal = true;
+        break;
+    case TD_KEY_DOWN:
+        move_lines(1);
+        keep_goal = true;
+        break;
+    case TD_KEY_PGUP:
+        move_lines(-E.view_rows);
+        keep_goal = true;
+        break;
+    case TD_KEY_PGDN:
+        move_lines(E.view_rows);
+        keep_goal = true;
+        break;
+    case TD_KEY_HOME:
+        E.cur = ctrl ? 0 : line_start(E.cur);
+        break;
+    case TD_KEY_END:
+        E.cur = ctrl ? E.len : line_end(E.cur);
+        break;
+    default:
+        moved = false;
+        break;
     }
-    if (moved) {
-        if (shift) {
-            if (E.anchor < 0 || !sel) E.anchor = before;
-        } else {
+    if (moved)
+    {
+        if (shift)
+        {
+            if (E.anchor < 0 || !sel)
+                E.anchor = before;
+        }
+        else
+        {
             E.anchor = -1;
         }
-        if (E.undo) E.undo->merge = false;   /* typing elsewhere is a new step */
-        if (!keep_goal) E.goal_col = col_of(E.cur);
+        if (E.undo)
+            E.undo->merge = false;   /* typing elsewhere is a new step */
+        if (!keep_goal)
+            E.goal_col = col_of(E.cur);
         E.follow = true;
         td_wm_invalidate();
         return true;
     }
 
-    switch (k) {
-    case TD_KEY_ENTER: insert_text("\n", 1, K_TYPE); break;
-    case TD_KEY_TAB: insert_text("    ", 4, K_TYPE); break;
-    case TD_KEY_BACKSPACE: delete_key(true); break;
-    case TD_KEY_DELETE: delete_key(false); break;
+    switch (k)
+    {
+    case TD_KEY_ENTER:
+        insert_text("\n", 1, K_TYPE);
+        break;
+    case TD_KEY_TAB:
+        insert_text("    ", 4, K_TYPE);
+        break;
+    case TD_KEY_BACKSPACE:
+        delete_key(true);
+        break;
+    case TD_KEY_DELETE:
+        delete_key(false);
+        break;
     default:
-        if (ctrl || (ev->mods & TD_MOD_ALT) || k < 0x20 || k >= TD_KEY_BASE) return false;
+        if (ctrl || (ev->mods & TD_MOD_ALT) || k < 0x20 || k >= TD_KEY_BASE)
+            return false;
         {
             uint8_t u[4];
             insert_text((const char *)u, td_utf8_encode(k, u), K_TYPE);
@@ -821,29 +1021,65 @@ static bool on_key(const td_event_t *ev)
 
 /* ------------------------------------------------------ context menu */
 
-enum { M_UNDO, M_REDO, M_SEP1, M_CUT, M_COPY, M_PASTE, M_DELETE, M_SEP2, M_ALL };
+enum
+{
+    M_UNDO,
+    M_REDO,
+    M_SEP1,
+    M_CUT,
+    M_COPY,
+    M_PASTE,
+    M_DELETE,
+    M_SEP2,
+    M_ALL
+};
 
 static void menu_chosen(int item, void *user)
 {
     (void)user;
-    if (!td_win_is_open(s_win)) return;
-    switch (item) {
-    case M_UNDO: undo(); break;
-    case M_REDO: redo(); break;
-    case M_CUT: cut_selection(); break;
-    case M_COPY: copy_selection(); break;
-    case M_PASTE: paste(); break;
-    case M_DELETE: if (has_sel()) delete_key(false); break;
-    case M_ALL: select_all(); break;
-    default: break;
+    if (!td_win_is_open(s_win))
+        return;
+    switch (item)
+    {
+    case M_UNDO:
+        undo();
+        break;
+    case M_REDO:
+        redo();
+        break;
+    case M_CUT:
+        cut_selection();
+        break;
+    case M_COPY:
+        copy_selection();
+        break;
+    case M_PASTE:
+        paste();
+        break;
+    case M_DELETE:
+        if (has_sel())
+            delete_key(false);
+        break;
+    case M_ALL:
+        select_all();
+        break;
+    default:
+        break;
     }
 }
 
 static void context_menu(int x, int y)
 {
     static const char *const items[] = {
-        "Undo       Ctrl+Z", "Redo       Ctrl+Y", "-", "Cut        Ctrl+X", "Copy       Ctrl+C",
-        "Paste      Ctrl+V", "Delete     Del", "-", "Select all Ctrl+A",
+        "Undo       Ctrl+Z",
+        "Redo       Ctrl+Y",
+        "-",
+        "Cut        Ctrl+X",
+        "Copy       Ctrl+C",
+        "Paste      Ctrl+V",
+        "Delete     Del",
+        "-",
+        "Select all Ctrl+A",
     };
     td_rect_t c = td_win_client(s_win);
     td_menu_popup(c.x + x, c.y + y, items, (int)(sizeof(items) / sizeof(items[0])), menu_chosen, NULL);
@@ -854,52 +1090,73 @@ static void context_menu(int x, int y)
 /* Text position under client cell (x, y), scrolling when y is outside. */
 static int pos_at(int x, int y)
 {
-    if (y < 0) {
+    if (y < 0)
+    {
         E.top += y;
-        if (E.top < 0) E.top = 0;
+        if (E.top < 0)
+            E.top = 0;
         y = 0;
-    } else if (y >= E.view_rows) {
+    }
+    else if (y >= E.view_rows)
+    {
         E.top += y - E.view_rows + 1;
-        if (E.top > line_count() - 1) E.top = line_count() - 1;
+        if (E.top > line_count() - 1)
+            E.top = line_count() - 1;
         y = E.view_rows - 1;
     }
     int line = E.top + y;
-    if (line >= line_count()) line = line_count() - 1;
+    if (line >= line_count())
+        line = line_count() - 1;
     return at_col(nth_line(line), E.left + (x < 0 ? 0 : x));
 }
 
 static bool on_mouse(const td_event_t *ev)
 {
-    if (ev->button == TD_BUTTON_WHEEL_UP || ev->button == TD_BUTTON_WHEEL_DOWN) {
+    if (ev->button == TD_BUTTON_WHEEL_UP || ev->button == TD_BUTTON_WHEEL_DOWN)
+    {
         E.top += ev->button == TD_BUTTON_WHEEL_UP ? -3 : 3;
-        if (E.top > line_count() - 1) E.top = line_count() - 1;
-        if (E.top < 0) E.top = 0;
+        if (E.top > line_count() - 1)
+            E.top = line_count() - 1;
+        if (E.top < 0)
+            E.top = 0;
         td_wm_invalidate();
         return true;
     }
-    if (ev->action == TD_MOUSE_PRESS && ev->button == TD_BUTTON_RIGHT) {
-        if (ev->y < E.view_rows && !has_sel()) E.cur = pos_at(ev->x, ev->y);
+    if (ev->action == TD_MOUSE_PRESS && ev->button == TD_BUTTON_RIGHT)
+    {
+        if (ev->y < E.view_rows && !has_sel())
+            E.cur = pos_at(ev->x, ev->y);
         context_menu(ev->x, ev->y);
         td_wm_invalidate();
         return true;
     }
-    if (ev->action == TD_MOUSE_PRESS && ev->button == TD_BUTTON_LEFT && ev->y < E.view_rows) {
+    if (ev->action == TD_MOUSE_PRESS && ev->button == TD_BUTTON_LEFT && ev->y < E.view_rows)
+    {
         int p = pos_at(ev->x, ev->y);
         uint32_t now = td_millis();
-        if (p == E.click_pos && now - E.click_ms < DOUBLE_CLICK_MS) {
+        if (p == E.click_pos && now - E.click_ms < DOUBLE_CLICK_MS)
+        {
             /* Double-click: select the word (or run of other characters). */
             int a = p, b = p;
             bool wc = p < E.len && word_char(E.buf[p]);
-            while (a > 0 && word_char(E.buf[a - 1]) == wc && E.buf[a - 1] != '\n') a--;
-            while (b < E.len && word_char(E.buf[b]) == wc && E.buf[b] != '\n') b++;
+            while (a > 0 && word_char(E.buf[a - 1]) == wc && E.buf[a - 1] != '\n')
+                a--;
+            while (b < E.len && word_char(E.buf[b]) == wc && E.buf[b] != '\n')
+                b++;
             E.anchor = a;
             E.cur = b;
             E.click_ms = 0;
             E.mouse_down = false;
-        } else {
-            if (ev->mods & TD_MOD_SHIFT) {
-                if (E.anchor < 0) E.anchor = E.cur;
-            } else {
+        }
+        else
+        {
+            if (ev->mods & TD_MOD_SHIFT)
+            {
+                if (E.anchor < 0)
+                    E.anchor = E.cur;
+            }
+            else
+            {
                 E.anchor = p;
             }
             E.cur = p;
@@ -907,20 +1164,24 @@ static bool on_mouse(const td_event_t *ev)
             E.click_pos = p;
             E.mouse_down = true;
         }
-        if (E.undo) E.undo->merge = false;
+        if (E.undo)
+            E.undo->merge = false;
         E.goal_col = col_of(E.cur);
         td_wm_invalidate();
         return true;
     }
-    if (ev->action == TD_MOUSE_DRAG && E.mouse_down) {
+    if (ev->action == TD_MOUSE_DRAG && E.mouse_down)
+    {
         E.cur = pos_at(ev->x, ev->y);
         E.goal_col = col_of(E.cur);
         td_wm_invalidate();
         return true;
     }
-    if (ev->action == TD_MOUSE_RELEASE && E.mouse_down) {
+    if (ev->action == TD_MOUSE_RELEASE && E.mouse_down)
+    {
         E.mouse_down = false;
-        if (E.anchor == E.cur) E.anchor = -1;
+        if (E.anchor == E.cur)
+            E.anchor = -1;
         td_wm_invalidate();
     }
     return true;
@@ -929,12 +1190,15 @@ static bool on_mouse(const td_event_t *ev)
 static bool on_event(td_window_t *win, const td_event_t *ev)
 {
     (void)win;
-    if (ev->type == TD_EV_KEY) return on_key(ev);
-    if (ev->type == TD_EV_PASTE) {
+    if (ev->type == TD_EV_KEY)
+        return on_key(ev);
+    if (ev->type == TD_EV_PASTE)
+    {
         paste_from_terminal(ev);
         return true;
     }
-    if (ev->type == TD_EV_MOUSE) return on_mouse(ev);
+    if (ev->type == TD_EV_MOUSE)
+        return on_mouse(ev);
     return false;
 }
 
@@ -944,7 +1208,8 @@ static bool on_drop(td_window_t *win, int x, int y, const td_drag_item_t *item)
     (void)win;
     (void)x;
     (void)y;
-    if (!item->is_dir) td_editor_open(item->path);
+    if (!item->is_dir)
+        td_editor_open(item->path);
     return true;
 }
 
@@ -962,16 +1227,20 @@ static void on_close(td_window_t *win)
 
 void td_editor_open(const char *path)
 {
-    if (!fs() || !fs()->read || !fs()->write) {
+    if (!fs() || !fs()->read || !fs()->write)
+    {
         td_msgbox("Editor", "No filesystem on this platform.", "OK", NULL, NULL);
         return;
     }
-    if (td_win_is_open(s_win)) {
-        if (path && strcmp(path, E.path) == 0) {
+    if (td_win_is_open(s_win))
+    {
+        if (path && strcmp(path, E.path) == 0)
+        {
             td_win_focus(s_win);
             return;
         }
-        if (E.modified) {
+        if (E.modified)
+        {
             td_win_focus(s_win);
             set_status("Save or close this file first");
             return;
@@ -984,13 +1253,15 @@ void td_editor_open(const char *path)
     E.click_pos = -1;
     E.buf = malloc(TD_EDITOR_MAX + 1);
     E.undo = calloc(1, sizeof(undo_t));   /* without it: no undo, still edits */
-    if (!E.buf) {
+    if (!E.buf)
+    {
         free(E.undo);
         E.undo = NULL;
         td_msgbox("Editor", "Not enough memory.", "OK", NULL, NULL);
         return;
     }
-    if (!load(path)) {
+    if (!load(path))
+    {
         free(E.buf);
         free(E.undo);
         E.buf = NULL;
@@ -998,7 +1269,8 @@ void td_editor_open(const char *path)
         td_msgbox("Editor", "The file could not be read.", "OK", NULL, NULL);
         return;
     }
-    if (path) snprintf(E.path, sizeof(E.path), "%s", path);
+    if (path)
+        snprintf(E.path, sizeof(E.path), "%s", path);
 
     td_window_desc_t d = {
         .title = "Editor",
@@ -1013,7 +1285,8 @@ void td_editor_open(const char *path)
         .on_drop = on_drop,
     };
     s_win = td_win_create(&d);
-    if (!s_win) {
+    if (!s_win)
+    {
         free(E.buf);
         free(E.undo);
         E.buf = NULL;
@@ -1022,16 +1295,23 @@ void td_editor_open(const char *path)
     }
     E.follow = true;
     update_title();
-    if (E.readonly) set_status("File too large: read-only");
-    else if (!E.undo) set_status("Low memory: undo is off");
+    if (E.readonly)
+        set_status("File too large: read-only");
+    else if (!E.undo)
+        set_status("Low memory: undo is off");
 }
 
 static void launch(void)
 {
-    if (td_win_is_open(s_win)) td_win_focus(s_win);
-    else td_editor_open(NULL);
+    if (td_win_is_open(s_win))
+        td_win_focus(s_win);
+    else
+        td_editor_open(NULL);
 }
 
-static const td_app_t s_app = { "Editor", launch, "\xC2\xB6_" };
+static const td_app_t s_app = {"Editor", launch, "\xC2\xB6_"};
 
-void td_editor_register(void) { td_app_register(&s_app); }
+void td_editor_register(void)
+{
+    td_app_register(&s_app);
+}

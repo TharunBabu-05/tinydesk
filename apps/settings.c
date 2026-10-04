@@ -13,9 +13,10 @@
 #include "td_apps.h"
 
 #define SETTINGS_MAGIC 0x54445331u   /* "TDS1" */
-#define SETTINGS_FILE "/.tinydesk_settings"
+#define SETTINGS_FILE  "/.tinydesk_settings"
 
-typedef struct {
+typedef struct
+{
     uint32_t magic;
     uint8_t theme;
     uint8_t ascii;
@@ -34,8 +35,8 @@ typedef struct {
 
 #define LEGACY_SIZE 8   /* magic + theme, ascii, pattern, hide_icons */
 
-static const uint32_t s_patterns[] = { 0x2591, 0x2592, 0x2593, 0x00B7, ' ' };
-static const char *const s_pattern_names[] = { "light shade", "medium shade", "dark shade", "dots", "plain" };
+static const uint32_t s_patterns[] = {0x2591, 0x2592, 0x2593, 0x00B7, ' '};
+static const char *const s_pattern_names[] = {"light shade", "medium shade", "dark shade", "dots", "plain"};
 #define PATTERN_COUNT ((int)(sizeof(s_patterns) / sizeof(s_patterns[0])))
 
 static td_clock_prefs_t s_clock;
@@ -43,15 +44,27 @@ static td_window_t *s_win;
 static td_widget_t *s_theme_box[2], *s_ascii, *s_icons, *s_pattern_label, *s_status;
 static td_widget_t *s_size_btn[3];      /* desktop icons, start menu, taskbar */
 
-static uint8_t size_code(td_ui_size_t s) { return s == TD_UI_SMALL ? 1 : s == TD_UI_LARGE ? 2 : 0; }
-static td_ui_size_t code_size(uint8_t c) { return c == 1 ? TD_UI_SMALL : c == 2 ? TD_UI_LARGE : TD_UI_MEDIUM; }
+static uint8_t size_code(td_ui_size_t s)
+{
+    return s == TD_UI_SMALL ? 1 : s == TD_UI_LARGE ? 2
+                                                   : 0;
+}
+static td_ui_size_t code_size(uint8_t c)
+{
+    return c == 1 ? TD_UI_SMALL : c == 2 ? TD_UI_LARGE
+                                         : TD_UI_MEDIUM;
+}
 
-td_clock_prefs_t *td_clock_prefs(void) { return &s_clock; }
+td_clock_prefs_t *td_clock_prefs(void)
+{
+    return &s_clock;
+}
 
 static int pattern_index(void)
 {
     for (int i = 0; i < PATTERN_COUNT; i++)
-        if (s_patterns[i] == td_desktop_pattern()) return i;
+        if (s_patterns[i] == td_desktop_pattern())
+            return i;
     return 0;
 }
 
@@ -65,14 +78,17 @@ static bool load_blob(settings_blob_t *b)
 {
     const td_sysinfo_t *si = td_sysinfo();
     memset(b, 0, sizeof(*b));
-    if (si->fs && si->fs->read && td_session_home()[0]) {
+    if (si->fs && si->fs->read && td_session_home()[0])
+    {
         char path[240];
         settings_path(path, sizeof(path));
         int n = si->fs->read(path, (char *)b, (int)sizeof(*b));
-        if (n >= LEGACY_SIZE && b->magic == SETTINGS_MAGIC) return true;
+        if (n >= LEGACY_SIZE && b->magic == SETTINGS_MAGIC)
+            return true;
         memset(b, 0, sizeof(*b));
     }
-    if (si->settings_load && si->settings_load(b, LEGACY_SIZE) && b->magic == SETTINGS_MAGIC) {
+    if (si->settings_load && si->settings_load(b, LEGACY_SIZE) && b->magic == SETTINGS_MAGIC)
+    {
         memset((uint8_t *)b + LEGACY_SIZE, 0, sizeof(*b) - LEGACY_SIZE);
         return true;
     }
@@ -82,18 +98,21 @@ static bool load_blob(settings_blob_t *b)
 void td_settings_apply_saved(void)
 {
     settings_blob_t b;
-    if (!load_blob(&b)) {
+    if (!load_blob(&b))
+    {
         b.theme = TD_THEME_DEFAULT;   /* built-in defaults */
         b.ascii = td_get_ascii_mode() ? 1 : 0;
         b.pattern = 0;
         b.hide_icons = 0;
     }
     td_theme_set(b.theme < td_theme_count() ? b.theme : TD_THEME_DEFAULT);
-    if ((b.ascii != 0) != td_get_ascii_mode()) {
+    if ((b.ascii != 0) != td_get_ascii_mode())
+    {
         td_set_ascii_mode(b.ascii != 0);
         td_full_redraw();
     }
-    if (b.pattern < PATTERN_COUNT) td_desktop_set_pattern(s_patterns[b.pattern]);
+    if (b.pattern < PATTERN_COUNT)
+        td_desktop_set_pattern(s_patterns[b.pattern]);
     td_desktop_set_icons(!b.hide_icons);
     s_clock.clock_12h = b.clock_12h ? 1 : 0;
     s_clock.date_format = b.date_format < TD_DATE_FORMATS ? b.date_format : TD_DATE_DMY;
@@ -120,7 +139,8 @@ bool td_settings_save(void)
         .menu_size = size_code(td_wm_start_menu_size()),
         .bar_size = size_code(td_wm_taskbar_size()),
     };
-    if (!si->fs || !si->fs->write || !td_session_home()[0]) return false;
+    if (!si->fs || !si->fs->write || !td_session_home()[0])
+        return false;
     char path[240];
     settings_path(path, sizeof(path));
     return si->fs->write(path, (const char *)&b, (int)sizeof(b)) == 0;
@@ -148,8 +168,10 @@ static void update_labels(void)
 static void changed(void)
 {
     update_labels();
-    if (td_settings_save()) td_widget_printf(s_status, "Saved for %.24s.", td_session_user());
-    else td_widget_set_text(s_status, "Saving is not available here.");
+    if (td_settings_save())
+        td_widget_printf(s_status, "Saved for %.24s.", td_session_user());
+    else
+        td_widget_set_text(s_status, "Saving is not available here.");
 }
 
 static void on_theme(td_widget_t *w, void *user)
@@ -185,16 +207,24 @@ static void on_pattern(td_widget_t *w, void *user)
 /* Small -> Medium -> Large -> Small. */
 static td_ui_size_t next_size(td_ui_size_t s)
 {
-    return s == TD_UI_SMALL ? TD_UI_MEDIUM : s == TD_UI_MEDIUM ? TD_UI_LARGE : TD_UI_SMALL;
+    return s == TD_UI_SMALL ? TD_UI_MEDIUM : s == TD_UI_MEDIUM ? TD_UI_LARGE
+                                                               : TD_UI_SMALL;
 }
 
 static void on_size(td_widget_t *w, void *user)
 {
     (void)w;
-    switch ((int)(intptr_t)user) {
-    case 0: td_wm_set_icon_size(next_size(td_wm_icon_size())); break;
-    case 1: td_wm_set_start_menu_size(next_size(td_wm_start_menu_size())); break;
-    default: td_wm_set_taskbar_size(next_size(td_wm_taskbar_size())); break;
+    switch ((int)(intptr_t)user)
+    {
+    case 0:
+        td_wm_set_icon_size(next_size(td_wm_icon_size()));
+        break;
+    case 1:
+        td_wm_set_start_menu_size(next_size(td_wm_start_menu_size()));
+        break;
+    default:
+        td_wm_set_taskbar_size(next_size(td_wm_taskbar_size()));
+        break;
     }
     changed();
 }
@@ -246,7 +276,8 @@ static void on_close(td_window_t *win)
 
 static void launch(void)
 {
-    if (td_win_is_open(s_win)) {
+    if (td_win_is_open(s_win))
+    {
         td_win_focus(s_win);
         return;
     }
@@ -258,14 +289,16 @@ static void launch(void)
         .on_close = on_close,
     };
     s_win = td_win_create(&d);
-    if (!s_win) return;
+    if (!s_win)
+        return;
 
     td_label(s_win, 1, 1, 0, "Theme");
     s_theme_box[0] = td_checkbox(s_win, 3, 2, td_theme_get(0)->name, false, on_theme, (void *)(intptr_t)0);
     s_theme_box[1] = td_checkbox(s_win, 20, 2, td_theme_get(1)->name, false, on_theme, (void *)(intptr_t)1);
     s_ascii = td_checkbox(s_win, 1, 4, "ASCII-only drawing (no UTF-8)", false, on_ascii, NULL);
     s_icons = td_checkbox(s_win, 1, 5, "Desktop icons", true, on_icons, NULL);
-    for (int i = 0; i < 3; i++) s_size_btn[i] = td_button(s_win, 18, 8 + i, "Medium", on_size, (void *)(intptr_t)i);
+    for (int i = 0; i < 3; i++)
+        s_size_btn[i] = td_button(s_win, 18, 8 + i, "Medium", on_size, (void *)(intptr_t)i);
     s_pattern_label = td_label(s_win, 1, 12, 0, "");
     td_button(s_win, 3, 13, "Next pattern", on_pattern, NULL);
     td_button(s_win, 1, 15, "Network...", on_network, NULL);
@@ -277,6 +310,9 @@ static void launch(void)
     update_labels();
 }
 
-static const td_app_t s_app = { "Settings", launch, "☼ " };
+static const td_app_t s_app = {"Settings", launch, "☼ "};
 
-void td_settings_register(void) { td_app_register(&s_app); }
+void td_settings_register(void)
+{
+    td_app_register(&s_app);
+}

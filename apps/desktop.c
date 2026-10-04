@@ -10,12 +10,13 @@
 
 #include "td_apps.h"
 
-#define DESK_MAX 24
-#define NAME_LEN 40
-#define PATH_LEN TD_PATH_MAX
+#define DESK_MAX   24
+#define NAME_LEN   40
+#define PATH_LEN   TD_PATH_MAX
 #define REFRESH_MS 3000
 
-typedef struct {
+typedef struct
+{
     char name[NAME_LEN];
     bool is_dir;
 } item_t;
@@ -27,14 +28,24 @@ static bool s_timer_started;
 static int s_target = -1;           /* item a menu or dialog is about */
 static char s_target_name[NAME_LEN];
 
-static const td_fs_ops_t *fs(void) { return td_sysinfo()->fs; }
+static const td_fs_ops_t *fs(void)
+{
+    return td_sysinfo()->fs;
+}
 
-const char *td_home_dir(void) { return td_session_home(); }
-const char *td_desktop_dir(void) { return s_desk; }
+const char *td_home_dir(void)
+{
+    return td_session_home();
+}
+const char *td_desktop_dir(void)
+{
+    return s_desk;
+}
 
 bool td_valid_name(const char *name)
 {
-    if (!name || !name[0] || strcmp(name, ".") == 0 || strcmp(name, "..") == 0) return false;
+    if (!name || !name[0] || strcmp(name, ".") == 0 || strcmp(name, "..") == 0)
+        return false;
     return strchr(name, '/') == NULL && strchr(name, '\\') == NULL;
 }
 
@@ -42,7 +53,8 @@ bool td_valid_name(const char *name)
 static void item_path(char *out, const char *name)
 {
     int n = snprintf(out, PATH_LEN, "%s/%s", s_desk, name);
-    if (n < 0 || n >= PATH_LEN) out[0] = '\0';
+    if (n < 0 || n >= PATH_LEN)
+        out[0] = '\0';
 }
 
 /* ------------------------------------------------------- the folder */
@@ -54,7 +66,8 @@ static void add_scan(const char *name, bool is_dir, uint32_t size, void *user)
 {
     (void)size;
     (void)user;
-    if (s_scan_count >= DESK_MAX || name[0] == '.') return;   /* hide dot files */
+    if (s_scan_count >= DESK_MAX || name[0] == '.')
+        return;   /* hide dot files */
     item_t *it = &s_scan[s_scan_count++];
     snprintf(it->name, sizeof(it->name), "%s", name);
     it->is_dir = is_dir;
@@ -62,25 +75,31 @@ static void add_scan(const char *name, bool is_dir, uint32_t size, void *user)
 
 static bool item_before(const item_t *a, const item_t *b)
 {
-    if (a->is_dir != b->is_dir) return a->is_dir;
+    if (a->is_dir != b->is_dir)
+        return a->is_dir;
     return strcmp(a->name, b->name) < 0;
 }
 
 void td_desktop_refresh(void)
 {
-    if (!fs() || !fs()->list || !s_desk[0]) return;
+    if (!fs() || !fs()->list || !s_desk[0])
+        return;
     s_scan_count = 0;
-    if (fs()->list(s_desk, add_scan, NULL) < 0) s_scan_count = 0;
-    for (int i = 1; i < s_scan_count; i++) {      /* folders first, by name */
+    if (fs()->list(s_desk, add_scan, NULL) < 0)
+        s_scan_count = 0;
+    for (int i = 1; i < s_scan_count; i++)
+    {      /* folders first, by name */
         item_t it = s_scan[i];
         int j = i - 1;
-        while (j >= 0 && item_before(&it, &s_scan[j])) {
+        while (j >= 0 && item_before(&it, &s_scan[j]))
+        {
             s_scan[j + 1] = s_scan[j];
             j--;
         }
         s_scan[j + 1] = it;
     }
-    if (s_scan_count == s_count && memcmp(s_scan, s_items, sizeof(item_t) * (size_t)s_count) == 0) return;
+    if (s_scan_count == s_count && memcmp(s_scan, s_items, sizeof(item_t) * (size_t)s_count) == 0)
+        return;
     memcpy(s_items, s_scan, sizeof(item_t) * (size_t)s_scan_count);
     s_count = s_scan_count;
     td_wm_invalidate();
@@ -106,23 +125,28 @@ const char *td_shell_path(const char *path)
 const char *td_move_into(const char *path, const char *dir)
 {
     const td_fs_ops_t *f = fs();
-    if (!f || !f->rename) return "Moving is not supported here.";
+    if (!f || !f->rename)
+        return "Moving is not supported here.";
     const char *slash = strrchr(path, '/');
     const char *name = slash ? slash + 1 : path;
     size_t parent_len = slash ? (size_t)(slash - path) : 0;
     size_t plen = strlen(path);
 
     /* Already in that folder: nothing to do. */
-    if (strlen(dir) == parent_len && strncmp(dir, path, parent_len) == 0) return NULL;
+    if (strlen(dir) == parent_len && strncmp(dir, path, parent_len) == 0)
+        return NULL;
     /* A folder cannot go inside itself. */
     if (strcmp(dir, path) == 0 || (strncmp(dir, path, plen) == 0 && dir[plen] == '/'))
         return "A folder cannot be moved into itself.";
 
     char to[PATH_LEN + NAME_LEN];
     int n = snprintf(to, sizeof(to), "%s/%s", dir, name);
-    if (n < 0 || n >= (int)sizeof(to)) return "The path is too long.";
-    if (f->exists && f->exists(to)) return "Something with that name is already there.";
-    if (f->rename(path, to) != 0) return "Move failed.";
+    if (n < 0 || n >= (int)sizeof(to))
+        return "The path is too long.";
+    if (f->exists && f->exists(to))
+        return "Something with that name is already there.";
+    if (f->rename(path, to) != 0)
+        return "Move failed.";
     td_desktop_refresh();
     return NULL;
 }
@@ -144,7 +168,8 @@ static const char *prov_label(int i, void *user)
 static const char *prov_icon(int i, void *user)
 {
     (void)user;
-    if (s_items[i].is_dir) return "[/";
+    if (s_items[i].is_dir)
+        return "[/";
     return td_is_script(s_items[i].name) ? "#!" : "\xC2\xB6 ";   /* #! for shell scripts */
 }
 
@@ -156,11 +181,14 @@ static int prov_icon_fg(int i, void *user)
 
 static void open_item(int i)
 {
-    if (i < 0 || i >= s_count) return;
+    if (i < 0 || i >= s_count)
+        return;
     char path[PATH_LEN];
     item_path(path, s_items[i].name);
-    if (s_items[i].is_dir) td_files_open(path);
-    else td_editor_open(path);
+    if (s_items[i].is_dir)
+        td_files_open(path);
+    else
+        td_editor_open(path);
 }
 
 static void prov_open(int i, void *user)
@@ -171,19 +199,30 @@ static void prov_open(int i, void *user)
 
 /* --------------------------------------------------------- actions */
 
-static void error_box(const char *text) { td_msgbox("Desktop", text, "OK", NULL, NULL); }
+static void error_box(const char *text)
+{
+    td_msgbox("Desktop", text, "OK", NULL, NULL);
+}
 
 /* Show an error and leave the calling function. */
-#define FAIL(text) do { error_box(text); return; } while (0)
+#define FAIL(text)       \
+    do                   \
+    {                    \
+        error_box(text); \
+        return;          \
+    } while (0)
 
 static void new_file_answer(const char *name, void *user)
 {
     (void)user;
     char path[PATH_LEN];
-    if (!td_valid_name(name)) FAIL("That is not a valid name.");
+    if (!td_valid_name(name))
+        FAIL("That is not a valid name.");
     item_path(path, name);
-    if (fs()->exists && fs()->exists(path)) FAIL("That name is already in use.");
-    if (fs()->write(path, "", 0) != 0) FAIL("The file could not be created.");
+    if (fs()->exists && fs()->exists(path))
+        FAIL("That name is already in use.");
+    if (fs()->write(path, "", 0) != 0)
+        FAIL("The file could not be created.");
     td_desktop_refresh();
     td_editor_open(path);
 }
@@ -192,10 +231,13 @@ static void new_folder_answer(const char *name, void *user)
 {
     (void)user;
     char path[PATH_LEN];
-    if (!td_valid_name(name)) FAIL("That is not a valid name.");
+    if (!td_valid_name(name))
+        FAIL("That is not a valid name.");
     item_path(path, name);
-    if (fs()->exists && fs()->exists(path)) FAIL("That name is already in use.");
-    if (fs()->mkdir(path) != 0) FAIL("The folder could not be created.");
+    if (fs()->exists && fs()->exists(path))
+        FAIL("That name is already in use.");
+    if (fs()->mkdir(path) != 0)
+        FAIL("The folder could not be created.");
     td_desktop_refresh();
 }
 
@@ -203,21 +245,26 @@ static void rename_answer(const char *name, void *user)
 {
     (void)user;
     char from[PATH_LEN], to[PATH_LEN];
-    if (!td_valid_name(name)) FAIL("That is not a valid name.");
-    if (strcmp(name, s_target_name) == 0) return;
+    if (!td_valid_name(name))
+        FAIL("That is not a valid name.");
+    if (strcmp(name, s_target_name) == 0)
+        return;
     item_path(from, s_target_name);
     item_path(to, name);
-    if (fs()->rename(from, to) != 0) FAIL("Rename failed (is the name in use?).");
+    if (fs()->rename(from, to) != 0)
+        FAIL("Rename failed (is the name in use?).");
     td_desktop_refresh();
 }
 
 static void delete_answer(int button, void *user)
 {
     (void)user;
-    if (button != 0) return;
+    if (button != 0)
+        return;
     char path[PATH_LEN];
     item_path(path, s_target_name);
-    if (fs()->remove(path) != 0) error_box("Delete failed.");
+    if (fs()->remove(path) != 0)
+        error_box("Delete failed.");
     td_desktop_refresh();
 }
 
@@ -234,9 +281,12 @@ static void ask_delete(void)
 static void item_menu_chosen(int item, void *user)
 {
     (void)user;
-    if (s_target < 0 || s_target >= s_count || strcmp(s_items[s_target].name, s_target_name) != 0) return;
-    if (!s_items[s_target].is_dir && td_is_script(s_target_name)) {
-        if (item == 0) {
+    if (s_target < 0 || s_target >= s_count || strcmp(s_items[s_target].name, s_target_name) != 0)
+        return;
+    if (!s_items[s_target].is_dir && td_is_script(s_target_name))
+    {
+        if (item == 0)
+        {
             char path[PATH_LEN];
             item_path(path, s_target_name);
             td_script_run(path);
@@ -244,11 +294,19 @@ static void item_menu_chosen(int item, void *user)
         }
         item--;
     }
-    switch (item) {
-    case 0: open_item(s_target); break;
-    case 1: td_inputbox("Rename", "New name:", s_target_name, rename_answer, NULL); break;
-    case 2: ask_delete(); break;
-    default: break;
+    switch (item)
+    {
+    case 0:
+        open_item(s_target);
+        break;
+    case 1:
+        td_inputbox("Rename", "New name:", s_target_name, rename_answer, NULL);
+        break;
+    case 2:
+        ask_delete();
+        break;
+    default:
+        break;
     }
 }
 
@@ -256,29 +314,53 @@ static void item_menu_chosen(int item, void *user)
 static void desktop_menu_chosen(int item, void *user)
 {
     (void)user;
-    switch (item) {
-    case 0: td_inputbox("New file", "Name of the new file on the Desktop:", "notes.txt", new_file_answer, NULL); break;
-    case 1: td_inputbox("New folder", "Name of the new folder on the Desktop:", "New folder", new_folder_answer, NULL); break;
-    case 3: td_app_launch("Terminal"); break;
-    case 4: td_files_open(s_desk); break;
-    case 6: td_desktop_refresh(); break;
-    case 7: td_app_launch("Settings"); break;
-    default: break;
+    switch (item)
+    {
+    case 0:
+        td_inputbox("New file", "Name of the new file on the Desktop:", "notes.txt", new_file_answer, NULL);
+        break;
+    case 1:
+        td_inputbox("New folder", "Name of the new folder on the Desktop:", "New folder", new_folder_answer, NULL);
+        break;
+    case 3:
+        td_app_launch("Terminal");
+        break;
+    case 4:
+        td_files_open(s_desk);
+        break;
+    case 6:
+        td_desktop_refresh();
+        break;
+    case 7:
+        td_app_launch("Settings");
+        break;
+    default:
+        break;
     }
 }
 
 static void prov_context(int i, int x, int y, void *user)
 {
     (void)user;
-    if (i >= 0 && i < s_count) {
-        static const char *const items[] = { "Run", "Open", "Rename", "Delete" };
+    if (i >= 0 && i < s_count)
+    {
+        static const char *const items[] = {"Run", "Open", "Rename", "Delete"};
         bool script = !s_items[i].is_dir && td_is_script(s_items[i].name);
         s_target = i;
         snprintf(s_target_name, sizeof(s_target_name), "%s", s_items[i].name);
         td_menu_popup(x, y, script ? items : items + 1, script ? 4 : 3, item_menu_chosen, NULL);
-    } else {
+    }
+    else
+    {
         static const char *const items[] = {
-            "New file", "New folder", "-", "Terminal", "Open Desktop folder", "-", "Refresh", "Settings",
+            "New file",
+            "New folder",
+            "-",
+            "Terminal",
+            "Open Desktop folder",
+            "-",
+            "Refresh",
+            "Settings",
         };
         td_menu_popup(x, y, items, 8, desktop_menu_chosen, NULL);
     }
@@ -288,7 +370,8 @@ static void prov_context(int i, int x, int y, void *user)
 static bool prov_drag(int i, td_drag_item_t *item, void *user)
 {
     (void)user;
-    if (i < 0 || i >= s_count) return false;
+    if (i < 0 || i >= s_count)
+        return false;
     char path[PATH_LEN];
     item_path(path, s_items[i].name);
     snprintf(item->path, sizeof(item->path), "%s", path);
@@ -303,10 +386,13 @@ static void prov_drop(int i, const td_drag_item_t *item, void *user)
 {
     (void)user;
     char dir[PATH_LEN];
-    if (i >= 0 && i < s_count && s_items[i].is_dir) item_path(dir, s_items[i].name);
-    else snprintf(dir, sizeof(dir), "%s", s_desk);
+    if (i >= 0 && i < s_count && s_items[i].is_dir)
+        item_path(dir, s_items[i].name);
+    else
+        snprintf(dir, sizeof(dir), "%s", s_desk);
     const char *err = td_move_into(item->path, dir);
-    if (err) error_box(err);
+    if (err)
+        error_box(err);
     td_files_changed();
 }
 
@@ -339,18 +425,22 @@ static const char s_welcome[] =
 void td_desktop_folder_init(void)
 {
     const td_fs_ops_t *f = fs();
-    if (!f || !f->list || !f->mkdir) return;
+    if (!f || !f->list || !f->mkdir)
+        return;
     const char *home = td_session_home();
     snprintf(s_desk, sizeof(s_desk), "%.*s/Desktop", PATH_LEN - 9, home);
 
-    if (!f->exists || !f->exists(s_desk)) {
+    if (!f->exists || !f->exists(s_desk))
+    {
         /* Parents may already exist: errors are fine. */
         char parent[PATH_LEN];
         f->mkdir(f->root);
         snprintf(parent, sizeof(parent), "%s/home", f->root);
-        if (!td_session_is_root()) f->mkdir(parent);
+        if (!td_session_is_root())
+            f->mkdir(parent);
         f->mkdir(home);
-        if (f->mkdir(s_desk) == 0 && f->write) {
+        if (f->mkdir(s_desk) == 0 && f->write)
+        {
             char path[PATH_LEN];
             item_path(path, "Welcome.txt");
             f->write(path, s_welcome, (int)sizeof(s_welcome) - 1);
@@ -359,7 +449,8 @@ void td_desktop_folder_init(void)
     s_count = 0;                 /* a different user: forget the old icons */
     td_desktop_set_provider(&s_provider);
     td_desktop_refresh();
-    if (!s_timer_started) {
+    if (!s_timer_started)
+    {
         s_timer_started = true;
         td_timer_start(REFRESH_MS, true, refresh_timer, NULL, td_millis());
     }

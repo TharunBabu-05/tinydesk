@@ -20,7 +20,8 @@
 #define TD_REVERSE   0x04u
 
 /* One character cell: 8 bytes, so 80x25 is 16 KB per buffer. */
-typedef struct {
+typedef struct
+{
     uint32_t ch;     /* Unicode code point (ASCII + box drawing + blocks) */
     uint8_t fg, bg;  /* 256-colour palette indexes */
     uint8_t attr;    /* TD_BOLD | TD_UNDERLINE | TD_REVERSE */
@@ -32,19 +33,21 @@ typedef struct {
 
 /* A screen-sized grid of cells. Storage is static and sized for the
  * maximum terminal; cols/rows give the part in use. */
-typedef struct {
+typedef struct
+{
     int cols, rows;
     td_cell_t cells[TD_MAX_COLS * TD_MAX_ROWS];
 } td_buffer_t;
 
-typedef struct {
+typedef struct
+{
     int x, y, w, h;
 } td_rect_t;
 
 /* Build a rectangle. */
 static inline td_rect_t td_rect(int x, int y, int w, int h)
 {
-    td_rect_t r = { x, y, w, h };
+    td_rect_t r = {x, y, w, h};
     return r;
 }
 
@@ -67,7 +70,8 @@ td_cell_t *td_buffer_cell(td_buffer_t *buf, int x, int y);
 /* ------------------------------------------------------------ drawing */
 
 /* Box styles for td_box(). */
-typedef enum {
+typedef enum
+{
     TD_BOX_SINGLE = 0,
     TD_BOX_DOUBLE,
     TD_BOX_ASCII,
@@ -136,7 +140,8 @@ uint32_t td_utf8_next(const char **s);
 int td_utf8_len(const char *s);
 
 /* Streaming decoder for byte-at-a-time input. */
-typedef struct {
+typedef struct
+{
     uint32_t cp;
     uint8_t need;   /* continuation bytes still expected */
     uint8_t len;    /* continuation bytes of the current sequence */
@@ -149,7 +154,8 @@ int td_utf8_feed(td_utf8_decoder_t *d, uint8_t byte, uint32_t out[2]);
 
 /* ----------------------------------------------------------- renderer */
 
-typedef struct {
+typedef struct
+{
     const td_hal_t *hal;
     int cur_x, cur_y;          /* terminal cursor, -1 = unknown */
     int cur_fg, cur_bg, cur_attr; /* terminal colour state, -1 = unknown */

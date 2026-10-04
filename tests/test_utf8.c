@@ -34,7 +34,10 @@ static void test_decode_string(void)
     CHECK_EQ(td_utf8_next(&s), 0);
 
     /* Malformed: stray continuation, overlong, truncated. */
-    const char *bad = "\x80" "\xC0\x80" "\xE2\x94" "z";
+    const char *bad = "\x80"
+                      "\xC0\x80"
+                      "\xE2\x94"
+                      "z";
     CHECK_EQ(td_utf8_next(&bad), 0xFFFD);
     CHECK_EQ(td_utf8_next(&bad), 0xFFFD);   /* C0 is never valid */
     CHECK_EQ(td_utf8_next(&bad), 0xFFFD);   /* its 80 */
@@ -47,9 +50,9 @@ static void test_decode_string(void)
 
 static void test_stream(void)
 {
-    td_utf8_decoder_t d = { 0 };
+    td_utf8_decoder_t d = {0};
     uint32_t out[2];
-    const uint8_t seq[] = { 0xE2, 0x94, 0x80 };
+    const uint8_t seq[] = {0xE2, 0x94, 0x80};
     CHECK_EQ(td_utf8_feed(&d, seq[0], out), 0);
     CHECK_EQ(td_utf8_feed(&d, seq[1], out), 0);
     CHECK_EQ(td_utf8_feed(&d, seq[2], out), 1);

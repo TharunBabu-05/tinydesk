@@ -16,7 +16,8 @@
 
 #include "td_wm.h"
 
-typedef enum {
+typedef enum
+{
     TD_WT_LABEL,
     TD_WT_BUTTON,
     TD_WT_CHECKBOX,
@@ -26,7 +27,12 @@ typedef enum {
     TD_WT_SCROLLBAR,
 } td_widget_type_t;
 
-typedef enum { TD_ALIGN_LEFT, TD_ALIGN_CENTER, TD_ALIGN_RIGHT } td_align_t;
+typedef enum
+{
+    TD_ALIGN_LEFT,
+    TD_ALIGN_CENTER,
+    TD_ALIGN_RIGHT
+} td_align_t;
 
 /* Colour value meaning "use the theme". */
 #define TD_COLOR_DEFAULT (-1)
@@ -38,7 +44,8 @@ typedef void (*td_widget_fn)(td_widget_t *w, void *user);
 typedef const char *(*td_list_item_fn)(td_widget_t *w, int index, int *fg, void *user);
 
 /* A widget. Read the fields freely; change them through the functions. */
-struct td_widget {
+struct td_widget
+{
     bool used;
     uint8_t type;
     uint8_t align;

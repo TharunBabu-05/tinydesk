@@ -15,8 +15,10 @@ static void update(void)
     if (si->free_heap && psram)
         td_widget_printf(s_heap, "Free RAM:  %u KB + %u KB PSRAM", (unsigned)(si->free_heap() / 1024u),
                          (unsigned)(si->psram_free() / 1024u));
-    else if (si->free_heap) td_widget_printf(s_heap, "Free RAM:  %u KB", (unsigned)(si->free_heap() / 1024u));
-    else td_widget_printf(s_heap, "Free RAM:  n/a");
+    else if (si->free_heap)
+        td_widget_printf(s_heap, "Free RAM:  %u KB", (unsigned)(si->free_heap() / 1024u));
+    else
+        td_widget_printf(s_heap, "Free RAM:  n/a");
     uint32_t s = td_uptime_ms() / 1000u;
     td_widget_printf(s_uptime, "Uptime:    %uh %02um %02us",
                      (unsigned)(s / 3600u), (unsigned)(s / 60u % 60u), (unsigned)(s % 60u));
@@ -42,7 +44,8 @@ static void on_close(td_window_t *win)
 
 static void launch(void)
 {
-    if (td_win_is_open(s_win)) {
+    if (td_win_is_open(s_win))
+    {
         td_win_focus(s_win);
         return;
     }
@@ -51,7 +54,8 @@ static void launch(void)
      * PROJECT_VER, as Software Update shows it), else the library's. */
     td_ota_info_t fw;
     bool have_fw = si->ota && si->ota->info;
-    if (have_fw) si->ota->info(&fw);
+    if (have_fw)
+        si->ota->info(&fw);
     /* 14 rows with the optional Built and extra lines; drop the ones missing. */
     int h = 14 + (have_fw ? 1 : 0) + (si->extra ? 1 : 0);
     td_window_desc_t d = {
@@ -63,7 +67,8 @@ static void launch(void)
         .tick_ms = 1000,
     };
     s_win = td_win_create(&d);
-    if (!s_win) return;
+    if (!s_win)
+        return;
 
     char title_text[TD_TEXT_MAX];
     snprintf(title_text, sizeof(title_text), "TinyDesk %s", have_fw ? fw.version : TD_VERSION);
@@ -81,13 +86,15 @@ static void launch(void)
     snprintf(line, sizeof(line), "SDK:       %s", si->sdk_version ? si->sdk_version : "n/a");
     td_label(s_win, 2, 6, 0, line);
     int y = 7;
-    if (have_fw) {
+    if (have_fw)
+    {
         snprintf(line, sizeof(line), "Built:     %.20s, %.8s", fw.built, fw.running);
         td_label(s_win, 2, y++, 0, line);
     }
     s_heap = td_label(s_win, 2, y++, 0, "");
     s_uptime = td_label(s_win, 2, y++, 0, "");
-    if (si->extra) td_label(s_win, 2, y++, 0, si->extra);
+    if (si->extra)
+        td_label(s_win, 2, y++, 0, si->extra);
     td_label(s_win, 2, y++, 0, TD_REPO_URL);
     td_label(s_win, 2, y++, 0, TD_SHELL_REPO_URL);
 
@@ -96,6 +103,9 @@ static void launch(void)
     update();
 }
 
-static const td_app_t s_app = { "About", launch, "i " };
+static const td_app_t s_app = {"About", launch, "i "};
 
-void td_about_register(void) { td_app_register(&s_app); }
+void td_about_register(void)
+{
+    td_app_register(&s_app);
+}

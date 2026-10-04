@@ -15,11 +15,11 @@
 #include "td_modbus.h"
 #include "td_sock.h"
 
-#define LIST_Y 6
+#define LIST_Y            6
 #define REPEAT_DEFAULT_MS 1000
-#define REPEAT_MIN_MS 10
-#define REPEAT_MAX_MS 3600000u
-#define TICK_MS 10               /* how often the window looks for results and repeats */
+#define REPEAT_MIN_MS     10
+#define REPEAT_MAX_MS     3600000u
+#define TICK_MS           10               /* how often the window looks for results and repeats */
 
 static td_window_t *s_win;
 static td_widget_t *s_target, *s_unit, *s_table_btn, *s_addr, *s_count, *s_repeat, *s_interval, *s_values, *s_list,
@@ -28,7 +28,8 @@ static td_mb_table_t s_table = TD_MB_HOLDING;
 
 /* Window state, allocated while the window is open (RAM is tight on the
  * ESP32). */
-typedef struct {
+typedef struct
+{
     td_mb_result_t res;              /* last read shown in the list */
     bool have;
     char note[80];
@@ -48,24 +49,36 @@ typedef struct {
 
 static ui_t *U;
 
-static const char *text_of(const td_widget_t *w) { return td_widget_text(w); }
+static const char *text_of(const td_widget_t *w)
+{
+    return td_widget_text(w);
+}
 
 static void note(const char *msg)
 {
-    if (!U) return;
+    if (!U)
+        return;
     snprintf(U->note, sizeof(U->note), "%.*s", (int)sizeof(U->note) - 1, msg);
     td_wm_invalidate();
 }
 
-static bool is_bits(td_mb_table_t t) { return t == TD_MB_COILS || t == TD_MB_DISCRETE; }
+static bool is_bits(td_mb_table_t t)
+{
+    return t == TD_MB_COILS || t == TD_MB_DISCRETE;
+}
 
 static const char *table_caption(td_mb_table_t t)
 {
-    switch (t) {
-    case TD_MB_COILS: return "Coils (0x)";
-    case TD_MB_DISCRETE: return "Discrete inputs (1x)";
-    case TD_MB_INPUT: return "Input registers (3x)";
-    default: return "Holding registers (4x)";
+    switch (t)
+    {
+    case TD_MB_COILS:
+        return "Coils (0x)";
+    case TD_MB_DISCRETE:
+        return "Discrete inputs (1x)";
+    case TD_MB_INPUT:
+        return "Input registers (3x)";
+    default:
+        return "Holding registers (4x)";
     }
 }
 
@@ -76,7 +89,8 @@ static bool parse_u16(const char *s, uint16_t *out)
     const char *d = s[0] == '-' ? s + 1 : s;
     int base = d[0] == '0' && (d[1] == 'x' || d[1] == 'X') ? 16 : 10;   /* 010 is ten, not octal */
     long v = strtol(s, &end, base);
-    if (!s[0] || !end || *end || v < -32768 || v > 65535) return false;
+    if (!s[0] || !end || *end || v < -32768 || v > 65535)
+        return false;
     *out = (uint16_t)v;
     return true;
 }
@@ -87,12 +101,14 @@ static bool base_request(td_mb_request_t *r)
     memset(r, 0, sizeof(*r));
     snprintf(r->target, sizeof(r->target), "%s", text_of(s_target));
     uint16_t unit;
-    if (!parse_u16(text_of(s_unit), &unit) || unit > 255) {
+    if (!parse_u16(text_of(s_unit), &unit) || unit > 255)
+    {
         note("Unit must be 0..255 (TCP devices often use 1 or 255)");
         return false;
     }
     r->unit = (uint8_t)unit;
-    if (!parse_u16(text_of(s_addr), &r->addr)) {
+    if (!parse_u16(text_of(s_addr), &r->addr))
+    {
         note("Address must be a number from 0 to 65535");
         return false;
     }
@@ -106,7 +122,8 @@ static bool read_interval(void)
     char *end = NULL;
     const char *t = text_of(s_interval);
     unsigned long v = strtoul(t, &end, 10);
-    if (!t[0] || !end || *end || v < REPEAT_MIN_MS || v > REPEAT_MAX_MS) {
+    if (!t[0] || !end || *end || v < REPEAT_MIN_MS || v > REPEAT_MAX_MS)
+    {
         note("Interval: 10 to 3600000 ms");
         U->keep_note = U->ticket != 0;       /* a read still on its way */
         return false;
@@ -119,7 +136,8 @@ static void submit(const td_mb_request_t *r, bool is_read)
 {
     char err[80];
     int t = td_mb_submit(r, err, sizeof(err));
-    if (!t) {
+    if (!t)
+    {
         note(err);
         return;
     }
@@ -128,15 +146,18 @@ static void submit(const td_mb_request_t *r, bool is_read)
     td_mb_poll();                /* send it now, not on the next timer tick */
     /* While repeating, keep the last result on screen instead of flashing
      * "Reading..." every cycle. */
-    if (!(is_read && td_checkbox_get(s_repeat))) note(is_read ? "Reading..." : "Writing...");
+    if (!(is_read && td_checkbox_get(s_repeat)))
+        note(is_read ? "Reading..." : "Writing...");
 }
 
 static void do_read(void)
 {
     td_mb_request_t r;
-    if (!base_request(&r)) return;
+    if (!base_request(&r))
+        return;
     uint16_t count;
-    if (!parse_u16(text_of(s_count), &count) || count < 1 || count > TD_MB_MAX_READ) {
+    if (!parse_u16(text_of(s_count), &count) || count < 1 || count > TD_MB_MAX_READ)
+    {
         note("Count must be 1..125");
         return;
     }
@@ -145,33 +166,45 @@ static void do_read(void)
     submit(&r, true);
 }
 
-static void on_read(td_widget_t *w, void *user) { (void)w; (void)user; do_read(); }
+static void on_read(td_widget_t *w, void *user)
+{
+    (void)w;
+    (void)user;
+    do_read();
+}
 
 /* Write the values field ("1, 2, 0x10") at the address. */
 static void write_values(uint16_t addr, const char *text)
 {
-    if (s_table != TD_MB_HOLDING && s_table != TD_MB_COILS) {
+    if (s_table != TD_MB_HOLDING && s_table != TD_MB_COILS)
+    {
         note("Only coils and holding registers can be written");
         return;
     }
     td_mb_request_t r;
-    if (!base_request(&r)) return;
+    if (!base_request(&r))
+        return;
     r.addr = addr;
     char buf[TD_TEXT_MAX + 1];
     snprintf(buf, sizeof(buf), "%s", text);
-    for (char *tok = strtok(buf, ", "); tok; tok = strtok(NULL, ", ")) {
-        if (r.nvalues >= TD_MB_MAX_WRITE || !parse_u16(tok, &r.values[r.nvalues])) {
+    for (char *tok = strtok(buf, ", "); tok; tok = strtok(NULL, ", "))
+    {
+        if (r.nvalues >= TD_MB_MAX_WRITE || !parse_u16(tok, &r.values[r.nvalues]))
+        {
             note("Values: numbers separated by commas, e.g. 1, 2, 0x10");
             return;
         }
         r.nvalues++;
     }
-    if (!r.nvalues) {
+    if (!r.nvalues)
+    {
         note("Type the value(s) to write first");
         return;
     }
-    if (s_table == TD_MB_COILS) r.fc = r.nvalues == 1 ? 5 : 15;
-    else r.fc = r.nvalues == 1 ? 6 : 16;
+    if (s_table == TD_MB_COILS)
+        r.fc = r.nvalues == 1 ? 5 : 15;
+    else
+        r.fc = r.nvalues == 1 ? 6 : 16;
     submit(&r, false);
 }
 
@@ -180,7 +213,8 @@ static void on_write(td_widget_t *w, void *user)
     (void)w;
     (void)user;
     uint16_t addr;
-    if (!parse_u16(text_of(s_addr), &addr)) {
+    if (!parse_u16(text_of(s_addr), &addr))
+    {
         note("Address must be a number from 0 to 65535");
         return;
     }
@@ -190,9 +224,10 @@ static void on_write(td_widget_t *w, void *user)
 static void on_table(td_widget_t *w, void *user)
 {
     (void)user;
-    static const td_mb_table_t order[] = { TD_MB_HOLDING, TD_MB_INPUT, TD_MB_COILS, TD_MB_DISCRETE };
+    static const td_mb_table_t order[] = {TD_MB_HOLDING, TD_MB_INPUT, TD_MB_COILS, TD_MB_DISCRETE};
     int i = 0;
-    while (order[i] != s_table) i++;
+    while (order[i] != s_table)
+        i++;
     s_table = order[(i + 1) % 4];
     td_widget_set_text(w, table_caption(s_table));
     U->have = false;
@@ -204,8 +239,10 @@ static void on_repeat(td_widget_t *w, void *user)
     (void)user;
     U->period_ms = 0;
     U->last_start_ms = 0;
-    if (!td_checkbox_get(w)) return;
-    if (!read_interval()) {
+    if (!td_checkbox_get(w))
+        return;
+    if (!read_interval())
+    {
         td_checkbox_set(w, false);
         return;
     }
@@ -217,12 +254,15 @@ static void on_interval(td_widget_t *w, void *user)
 {
     (void)w;
     (void)user;
-    if (read_interval()) {
+    if (read_interval())
+    {
         char msg[48];
         snprintf(msg, sizeof(msg), "Repeat interval: %u ms", (unsigned)U->interval_ms);
         note(msg);
         U->period_ms = 0;
-    } else {
+    }
+    else
+    {
         td_checkbox_set(s_repeat, false);
     }
 }
@@ -231,13 +271,18 @@ static void on_server(td_widget_t *w, void *user)
 {
     (void)user;
     char err[64];
-    if (td_checkbox_get(w)) {
-        if (td_mb_server_start(TD_MB_TCP_PORT, err, sizeof(err))) note("Modbus TCP server started on port 502");
-        else {
+    if (td_checkbox_get(w))
+    {
+        if (td_mb_server_start(TD_MB_TCP_PORT, err, sizeof(err)))
+            note("Modbus TCP server started on port 502");
+        else
+        {
             note(err);
             td_checkbox_set(w, false);
         }
-    } else {
+    }
+    else
+    {
         td_mb_server_stop();
         note("Modbus TCP server stopped");
     }
@@ -247,7 +292,8 @@ static void on_server(td_widget_t *w, void *user)
 static void edit_answer(const char *text, void *user)
 {
     (void)user;
-    if (!U) return;
+    if (!U)
+        return;
     write_values(U->edit_addr, text);
 }
 
@@ -255,8 +301,10 @@ static void on_activate(td_widget_t *w, void *user)
 {
     (void)user;
     int i = td_list_selected(w);
-    if (!U->have || i < 0 || i >= U->res.count) return;
-    if (s_table != TD_MB_HOLDING && s_table != TD_MB_COILS) {
+    if (!U->have || i < 0 || i >= U->res.count)
+        return;
+    if (s_table != TD_MB_HOLDING && s_table != TD_MB_COILS)
+    {
         note("Only coils and holding registers can be written");
         return;
     }
@@ -274,7 +322,8 @@ static const char *get_item(td_widget_t *w, int index, int *fg, void *user)
     (void)w;
     (void)fg;
     (void)user;
-    if (!U->have || index >= U->res.count) return "";
+    if (!U->have || index >= U->res.count)
+        return "";
     unsigned a = (unsigned)(U->res.addr + index), v = U->res.values[index];
     if (is_bits((td_mb_table_t)U->res.fc))
         snprintf(U->item, sizeof(U->item), "%5u   %s", a, v ? "1  ON" : "0  off");
@@ -287,13 +336,15 @@ static void on_tick(td_window_t *win)
 {
     (void)win;
     bool repeat = td_checkbox_get(s_repeat);
-    if (U->ticket) {
+    if (U->ticket)
+    {
         /* The protocol timer polls every 20 ms; while a request is out,
          * poll at the window's pace too so short intervals are not
          * stretched by that timer. */
         td_mb_poll();
         td_mb_result_t res;
-        if (td_mb_result(U->ticket, &res)) {
+        if (td_mb_result(U->ticket, &res))
+        {
             U->ticket = 0;
             char msg[96];
             if (repeat && U->ticket_is_read && U->period_ms)
@@ -301,28 +352,37 @@ static void on_tick(td_window_t *win)
                          (unsigned)U->period_ms);
             else
                 snprintf(msg, sizeof(msg), "%s  (%u ms)", res.text, (unsigned)res.ms);
-            if (U->keep_note) U->keep_note = false;
-            else note(msg);
-            if (U->ticket_is_read && res.status == 0) {
+            if (U->keep_note)
+                U->keep_note = false;
+            else
+                note(msg);
+            if (U->ticket_is_read && res.status == 0)
+            {
                 U->res = res;
                 U->have = true;
                 td_list_set_count(s_list, res.count);
-            } else if (!U->ticket_is_read && res.status == 0) {
+            }
+            else if (!U->ticket_is_read && res.status == 0)
+            {
                 do_read();                         /* show the new values */
             }
         }
     }
     /* A repeat that is due starts in the same tick as the answer before it. */
-    if (!U->ticket && repeat && (int32_t)(td_proto_millis() - U->next_read_ms) >= 0) {
+    if (!U->ticket && repeat && (int32_t)(td_proto_millis() - U->next_read_ms) >= 0)
+    {
         uint32_t now = td_proto_millis();
-        if (U->last_start_ms) U->period_ms = now - U->last_start_ms;
+        if (U->last_start_ms)
+            U->period_ms = now - U->last_start_ms;
         U->last_start_ms = now;
         /* Fixed period from start to start; a device slower than the
          * interval is simply read again as soon as it has answered. */
         U->next_read_ms += U->interval_ms;
-        if ((int32_t)(now - U->next_read_ms) >= 0) U->next_read_ms = now + U->interval_ms;
+        if ((int32_t)(now - U->next_read_ms) >= 0)
+            U->next_read_ms = now + U->interval_ms;
         do_read();
-        if (!U->ticket) td_checkbox_set(s_repeat, false);   /* bad field: stop and show why */
+        if (!U->ticket)
+            td_checkbox_set(s_repeat, false);   /* bad field: stop and show why */
     }
 
     /* Redraw only for a change: the tick is fast. */
@@ -330,7 +390,8 @@ static void on_tick(td_window_t *win)
     int clients = 0;
     uint32_t reqs = 0;
     bool on = td_mb_server_status(&port, &clients, &reqs);
-    if (on != U->srv_on || clients != U->srv_clients || reqs != U->srv_reqs) {
+    if (on != U->srv_on || clients != U->srv_clients || reqs != U->srv_reqs)
+    {
         U->srv_on = on;
         U->srv_clients = clients;
         U->srv_reqs = reqs;
@@ -347,7 +408,8 @@ static void on_draw(td_window_t *win, int w, int h)
     td_text(30, 0, "Unit", t->win_fg, t->win_bg, 0);
     const td_mb_serial_t *rtu = td_mb_serial();
     int lines = rtu ? rtu->ports : 0;
-    td_text(42, 0, lines >= 2 ? "IP[:port], rtu1 or rtu2" : lines == 1 ? "IP[:port] or rtu" : "IP[:port] (Modbus TCP)",
+    td_text(42, 0, lines >= 2 ? "IP[:port], rtu1 or rtu2" : lines == 1 ? "IP[:port] or rtu"
+                                                                       : "IP[:port] (Modbus TCP)",
             t->dim, t->win_bg, 0);
     td_text(0, 1, "Table", t->win_fg, t->win_bg, 0);
     td_text(0, 2, "Address", t->win_fg, t->win_bg, 0);
@@ -362,7 +424,8 @@ static void on_draw(td_window_t *win, int w, int h)
     int clients;
     uint32_t reqs;
     char line[80];
-    if (td_mb_server_status(&port, &clients, &reqs)) {
+    if (td_mb_server_status(&port, &clients, &reqs))
+    {
         snprintf(line, sizeof(line), "port %u, %d client%s, %u requests", (unsigned)port, clients,
                  clients == 1 ? "" : "s", (unsigned)reqs);
         td_textn(22, h - 1, line, w - 22, t->accent, t->win_bg, 0);
@@ -377,11 +440,17 @@ static void on_close(td_window_t *win)
     U = NULL;
 }
 
-static void on_enter_read(td_widget_t *w, void *user) { (void)w; (void)user; do_read(); }
+static void on_enter_read(td_widget_t *w, void *user)
+{
+    (void)w;
+    (void)user;
+    do_read();
+}
 
 static void launch(void)
 {
-    if (td_win_is_open(s_win)) {
+    if (td_win_is_open(s_win))
+    {
         td_win_focus(s_win);
         return;
     }
@@ -397,12 +466,14 @@ static void launch(void)
         .tick_ms = TICK_MS,
     };
     U = calloc(1, sizeof(*U));
-    if (!U) {
+    if (!U)
+    {
         td_msgbox("Modbus", "Not enough memory. Close a window, then try again.", "OK", NULL, NULL);
         return;
     }
     s_win = td_win_create(&d);
-    if (!s_win) {
+    if (!s_win)
+    {
         free(U);
         U = NULL;
         return;
@@ -432,6 +503,9 @@ static void launch(void)
     (void)s_table_btn;
 }
 
-static const td_app_t s_app = { "Modbus", launch, "MB" };
+static const td_app_t s_app = {"Modbus", launch, "MB"};
 
-void td_modbus_register(void) { td_app_register(&s_app); }
+void td_modbus_register(void)
+{
+    td_app_register(&s_app);
+}

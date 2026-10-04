@@ -17,7 +17,8 @@
 
 /* Window state, allocated while the window is open (RAM is tight on the
  * ESP32: nothing here should cost memory while the app is closed). */
-typedef struct {
+typedef struct
+{
     char user[32], pass[64];
     char note[64];                    /* last action's outcome */
     uint32_t first_seq;               /* first message shown */
@@ -29,11 +30,15 @@ static td_window_t *s_win;
 static td_widget_t *s_broker, *s_connect, *s_topic, *s_payload, *s_retain, *s_list;
 static ui_t *U;
 
-static const char *text_of(const td_widget_t *w) { return td_widget_text(w); }
+static const char *text_of(const td_widget_t *w)
+{
+    return td_widget_text(w);
+}
 
 static void note(const char *msg)
 {
-    if (!U) return;
+    if (!U)
+        return;
     snprintf(U->note, sizeof(U->note), "%s", msg);
     td_wm_invalidate();
 }
@@ -68,41 +73,52 @@ static void do_connect(void)
 {
     td_mqtt_status_t st;
     td_mqtt_status(&st);
-    if (st.state != TD_MQTT_OFF) {
+    if (st.state != TD_MQTT_OFF)
+    {
         td_mqtt_disconnect();
         note("Disconnected");
         return;
     }
     td_mqtt_config_t *cfg = calloc(1, sizeof(*cfg));
-    if (!cfg) return;
+    if (!cfg)
+        return;
     char err[96];
     const char *text = text_of(s_broker);
-    if (is_config_name(text)) {
-        if (!td_mqtt_load_config(text, app_resolve, NULL, cfg, err, sizeof(err))) {
+    if (is_config_name(text))
+    {
+        if (!td_mqtt_load_config(text, app_resolve, NULL, cfg, err, sizeof(err)))
+        {
             char msg[64];
             snprintf(msg, sizeof(msg), "%.62s", err);
             note(msg);
             free(cfg);
             return;
         }
-    } else {
+    }
+    else
+    {
         cfg->auto_reconnect = true;
-        if (!td_mqtt_parse_broker(text, cfg)) {
+        if (!td_mqtt_parse_broker(text, cfg))
+        {
             note("Broker: host[:port], mqtts://host[:port] or a .conf file");
             free(cfg);
             return;
         }
     }
-    if (U->user[0]) {                         /* Login... overrides the file */
+    if (U->user[0])
+    {                         /* Login... overrides the file */
         snprintf(cfg->user, sizeof(cfg->user), "%s", U->user);
         snprintf(cfg->pass, sizeof(cfg->pass), "%s", U->pass);
     }
     note("Connecting...");
-    if (!td_mqtt_connect(cfg, err, sizeof(err))) {
+    if (!td_mqtt_connect(cfg, err, sizeof(err)))
+    {
         char msg[64];
         snprintf(msg, sizeof(msg), "%.62s", err);
         note(msg);
-    } else {
+    }
+    else
+    {
         U->note[0] = '\0';
     }
     memset(cfg, 0, sizeof(*cfg));             /* passwords */
@@ -118,11 +134,13 @@ static void on_config(td_widget_t *w, void *user)
     (void)user;
     char real[240];
     const td_fs_ops_t *fs = td_sysinfo()->fs;
-    if (!app_resolve(DEFAULT_CONF, real, sizeof(real), NULL) || !fs->write) {
+    if (!app_resolve(DEFAULT_CONF, real, sizeof(real), NULL) || !fs->write)
+    {
         note("No filesystem here");
         return;
     }
-    if (!conf_exists() && fs->write(real, td_mqtt_config_template, (int)strlen(td_mqtt_config_template)) != 0) {
+    if (!conf_exists() && fs->write(real, td_mqtt_config_template, (int)strlen(td_mqtt_config_template)) != 0)
+    {
         note("Could not create ~/mqtt.conf");
         return;
     }
@@ -131,12 +149,18 @@ static void on_config(td_widget_t *w, void *user)
     td_editor_open(real);
 }
 
-static void on_connect(td_widget_t *w, void *user) { (void)w; (void)user; do_connect(); }
+static void on_connect(td_widget_t *w, void *user)
+{
+    (void)w;
+    (void)user;
+    do_connect();
+}
 
 static void pass_answer(const char *text, void *user)
 {
     (void)user;
-    if (!U) return;
+    if (!U)
+        return;
     snprintf(U->pass, sizeof(U->pass), "%s", text);
     note(U->user[0] ? "Login saved for this session; connect again to use it" : "No user name: login cleared");
 }
@@ -144,10 +168,12 @@ static void pass_answer(const char *text, void *user)
 static void user_answer(const char *text, void *user)
 {
     (void)user;
-    if (!U) return;
+    if (!U)
+        return;
     snprintf(U->user, sizeof(U->user), "%s", text);
     U->pass[0] = '\0';
-    if (!U->user[0]) {
+    if (!U->user[0])
+    {
         note("Login cleared");
         return;
     }
@@ -163,7 +189,8 @@ static void on_login(td_widget_t *w, void *user)
 
 static const char *rc_text(int rc, const char *ok)
 {
-    return rc == 0 ? ok : rc == -2 ? "Too many subscriptions (8 at most)" : "Connect first, and give a topic";
+    return rc == 0 ? ok : rc == -2 ? "Too many subscriptions (8 at most)"
+                                   : "Connect first, and give a topic";
 }
 
 static void on_subscribe(td_widget_t *w, void *user)
@@ -186,15 +213,22 @@ static void on_unsubscribe(td_widget_t *w, void *user)
 static void do_publish(void)
 {
     const char *topic = text_of(s_topic), *msg = text_of(s_payload);
-    if (strchr(topic, '+') || strchr(topic, '#')) {
+    if (strchr(topic, '+') || strchr(topic, '#'))
+    {
         note("Publish needs a topic without + or #");
         return;
     }
     int rc = td_mqtt_publish(topic, msg, (int)strlen(msg), 0, td_checkbox_get(s_retain));
-    note(rc == 0 ? "Published" : rc == -2 ? "Busy, try again" : "Connect first, and give a topic");
+    note(rc == 0 ? "Published" : rc == -2 ? "Busy, try again"
+                                          : "Connect first, and give a topic");
 }
 
-static void on_publish(td_widget_t *w, void *user) { (void)w; (void)user; do_publish(); }
+static void on_publish(td_widget_t *w, void *user)
+{
+    (void)w;
+    (void)user;
+    do_publish();
+}
 
 /* ------------------------------------------------------------ the list */
 
@@ -203,14 +237,17 @@ static const char *get_item(td_widget_t *w, int index, int *fg, void *user)
     (void)w;
     (void)user;
     td_mqtt_msg_t m;
-    if (!td_mqtt_message(U->first_seq + (uint32_t)index, &m)) return "";
+    if (!td_mqtt_message(U->first_seq + (uint32_t)index, &m))
+        return "";
     char when[16];
     td_time_of_day(m.utc, when, sizeof(when));
     for (char *p = m.payload; *p; p++)
-        if ((unsigned char)*p < 0x20) *p = ' ';           /* keep it on one line */
+        if ((unsigned char)*p < 0x20)
+            *p = ' ';           /* keep it on one line */
     snprintf(U->item, sizeof(U->item), "%-8s %s %s  %s%s", when, m.outgoing ? "->" : "<-", m.topic, m.payload,
              m.len > TD_MQTT_PAYLOAD_KEEP ? "..." : "");
-    if (m.outgoing) *fg = td_theme()->dim;
+    if (m.outgoing)
+        *fg = td_theme()->dim;
     return U->item;
 }
 
@@ -221,15 +258,20 @@ static void update(void)
     td_widget_set_text(s_connect, st.state == TD_MQTT_OFF ? "Connect" : "Disconnect");
 
     uint32_t last = td_mqtt_last_seq();
-    if (last < U->shown_last) U->first_seq = 1;            /* a new connection */
-    if (last >= TD_MQTT_LOG && U->first_seq < last - TD_MQTT_LOG + 1) U->first_seq = last - TD_MQTT_LOG + 1;
-    if (U->first_seq == 0) U->first_seq = 1;
+    if (last < U->shown_last)
+        U->first_seq = 1;            /* a new connection */
+    if (last >= TD_MQTT_LOG && U->first_seq < last - TD_MQTT_LOG + 1)
+        U->first_seq = last - TD_MQTT_LOG + 1;
+    if (U->first_seq == 0)
+        U->first_seq = 1;
     int count = last >= U->first_seq ? (int)(last - U->first_seq + 1) : 0;
-    if (last != U->shown_last) {
+    if (last != U->shown_last)
+    {
         int sel = td_list_selected(s_list);
         bool follow = sel < 0 || sel >= count - 2;
         td_list_set_count(s_list, count);
-        if (follow && count > 0) td_list_select(s_list, count - 1);
+        if (follow && count > 0)
+            td_list_select(s_list, count - 1);
         U->shown_last = last;
     }
     td_wm_invalidate();
@@ -264,15 +306,19 @@ static void on_draw(td_window_t *win, int w, int h)
     char subs[160] = "Subscribed: ";
     int n = 0, qos;
     char topic[TD_MQTT_TOPIC_MAX];
-    while (td_mqtt_subscription(n, topic, sizeof(topic), &qos)) {
+    while (td_mqtt_subscription(n, topic, sizeof(topic), &qos))
+    {
         size_t used = strlen(subs);
         snprintf(subs + used, sizeof(subs) - used, "%s%s", n ? ", " : "", topic);
         n++;
     }
-    if (!n) snprintf(subs, sizeof(subs), "Subscribed: nothing yet");
+    if (!n)
+        snprintf(subs, sizeof(subs), "Subscribed: nothing yet");
     td_textn(0, 4, subs, w, t->win_fg, t->win_bg, 0);
-    if (U->note[0]) td_textn(0, 5, U->note, w, t->accent, t->win_bg, 0);
-    else td_textn(0, 5, "Time     Dir Topic  Message", w, t->dim, t->win_bg, 0);
+    if (U->note[0])
+        td_textn(0, 5, U->note, w, t->accent, t->win_bg, 0);
+    else
+        td_textn(0, 5, "Time     Dir Topic  Message", w, t->dim, t->win_bg, 0);
 }
 
 static void on_close(td_window_t *win)
@@ -284,12 +330,21 @@ static void on_close(td_window_t *win)
     U = NULL;
 }
 
-static void on_topic_enter(td_widget_t *w, void *user) { on_subscribe(w, user); }
-static void on_payload_enter(td_widget_t *w, void *user) { (void)w; (void)user; do_publish(); }
+static void on_topic_enter(td_widget_t *w, void *user)
+{
+    on_subscribe(w, user);
+}
+static void on_payload_enter(td_widget_t *w, void *user)
+{
+    (void)w;
+    (void)user;
+    do_publish();
+}
 
 static void launch(void)
 {
-    if (td_win_is_open(s_win)) {
+    if (td_win_is_open(s_win))
+    {
         td_win_focus(s_win);
         return;
     }
@@ -305,12 +360,14 @@ static void launch(void)
         .tick_ms = 250,
     };
     U = calloc(1, sizeof(*U));
-    if (!U) {
+    if (!U)
+    {
         td_msgbox("MQTT", "Not enough memory. Close a window, then try again.", "OK", NULL, NULL);
         return;
     }
     s_win = td_win_create(&d);
-    if (!s_win) {
+    if (!s_win)
+    {
         free(U);
         U = NULL;
         return;
@@ -331,7 +388,8 @@ static void launch(void)
 
     td_mqtt_status_t st;
     td_mqtt_status(&st);
-    td_widget_set_text(s_broker, st.broker[0] ? st.broker : conf_exists() ? DEFAULT_CONF : "localhost:1883");
+    td_widget_set_text(s_broker, st.broker[0] ? st.broker : conf_exists() ? DEFAULT_CONF
+                                                                          : "localhost:1883");
     td_widget_set_text(s_topic, "tinydesk/test");
     td_widget_set_text(s_payload, "hello from TinyDesk");
     U->first_seq = 1;
@@ -340,6 +398,9 @@ static void launch(void)
     td_widget_focus(s_broker);
 }
 
-static const td_app_t s_app = { "MQTT", launch, "MQ" };
+static const td_app_t s_app = {"MQTT", launch, "MQ"};
 
-void td_mqtt_register(void) { td_app_register(&s_app); }
+void td_mqtt_register(void)
+{
+    td_app_register(&s_app);
+}

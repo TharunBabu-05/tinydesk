@@ -21,29 +21,38 @@ static void update(void)
     const td_stats_t *st = td_stats();
     uint32_t total = si->total_heap ? si->total_heap() : 0;
 
-    if (si->free_heap && total) {
+    if (si->free_heap && total)
+    {
         uint32_t f = si->free_heap();
         td_progress_set(s_free_bar, percent(total - f, total));
         td_widget_printf(s_free_txt, "%u KB free of %u", (unsigned)(f / 1024u), (unsigned)(total / 1024u));
-    } else {
+    }
+    else
+    {
         td_widget_printf(s_free_txt, "n/a");
     }
-    if (si->min_free_heap && total) {
+    if (si->min_free_heap && total)
+    {
         uint32_t m = si->min_free_heap();
         td_progress_set(s_min_bar, percent(total - m, total));
         td_widget_printf(s_min_txt, "%u KB free at least", (unsigned)(m / 1024u));
-    } else {
+    }
+    else
+    {
         td_widget_printf(s_min_txt, "n/a");
     }
-    if (s_ps_bar) {
+    if (s_ps_bar)
+    {
         uint32_t pt = si->psram_total(), pf = si->psram_free();
         td_progress_set(s_ps_bar, percent(pt - pf, pt));
         td_widget_printf(s_ps_txt, "%u KB free of %u", (unsigned)(pf / 1024u), (unsigned)(pt / 1024u));
     }
 
     char tasks[16] = "n/a", cpu[16] = "n/a";
-    if (si->task_count) snprintf(tasks, sizeof(tasks), "%d", si->task_count());
-    if (si->cpu_mhz) snprintf(cpu, sizeof(cpu), "%d MHz", si->cpu_mhz());
+    if (si->task_count)
+        snprintf(tasks, sizeof(tasks), "%d", si->task_count());
+    if (si->cpu_mhz)
+        snprintf(cpu, sizeof(cpu), "%d MHz", si->cpu_mhz());
     td_widget_printf(s_tasks, "Tasks: %-8s  CPU: %s", tasks, cpu);
 
     uint32_t s = td_uptime_ms() / 1000u;
@@ -75,7 +84,8 @@ static void on_close(td_window_t *win)
 
 static void launch(void)
 {
-    if (td_win_is_open(s_win)) {
+    if (td_win_is_open(s_win))
+    {
         td_win_focus(s_win);
         return;
     }
@@ -91,7 +101,8 @@ static void launch(void)
         .tick_ms = 500,
     };
     s_win = td_win_create(&d);
-    if (!s_win) return;
+    if (!s_win)
+        return;
 
     td_label(s_win, 1, 1, 13, psram ? "Internal RAM" : "RAM in use");
     s_free_bar = td_progress(s_win, 14, 1, 18);
@@ -100,7 +111,8 @@ static void launch(void)
     s_min_bar = td_progress(s_win, 14, 2, 18);
     s_min_txt = td_label(s_win, 33, 2, 0, "");
     s_ps_bar = s_ps_txt = NULL;
-    if (psram) {
+    if (psram)
+    {
         td_label(s_win, 1, 3, 13, "PSRAM");
         s_ps_bar = td_progress(s_win, 14, 3, 18);
         s_ps_txt = td_label(s_win, 33, 3, 0, "");
@@ -113,6 +125,9 @@ static void launch(void)
     update();
 }
 
-static const td_app_t s_app = { "System Monitor", launch, "▄█" };
+static const td_app_t s_app = {"System Monitor", launch, "▄█"};
 
-void td_sysmon_register(void) { td_app_register(&s_app); }
+void td_sysmon_register(void)
+{
+    td_app_register(&s_app);
+}

@@ -22,10 +22,15 @@
 #include "telnet.h"
 #include "tdsh_espidf.h"
 
-#define AP_MAX 24
+#define AP_MAX       24
 #define WORKER_STACK 6144
 
-typedef enum { JOB_SCAN, JOB_CONNECT, JOB_DISCONNECT } job_t;
+typedef enum
+{
+    JOB_SCAN,
+    JOB_CONNECT,
+    JOB_DISCONNECT
+} job_t;
 
 static SemaphoreHandle_t s_lock;
 static volatile bool s_busy;
@@ -51,13 +56,16 @@ static void set_msg(const char *fmt, const char *arg)
 static void worker(void *arg)
 {
     (void)arg;
-    switch (s_job) {
-    case JOB_SCAN: {
+    switch (s_job)
+    {
+    case JOB_SCAN:
+    {
         tdsh_wifi_ap_t found[AP_MAX];
         int n = tdsh_wifi_scan_list(found, AP_MAX, s_user);
         xSemaphoreTake(s_lock, portMAX_DELAY);
         s_ap_count = n < 0 ? 0 : n;
-        for (int i = 0; i < s_ap_count; i++) {
+        for (int i = 0; i < s_ap_count; i++)
+        {
             memcpy(s_aps[i].ssid, found[i].ssid, sizeof(s_aps[i].ssid));
             s_aps[i].rssi = found[i].rssi;
             s_aps[i].secure = found[i].secure;
@@ -69,11 +77,16 @@ static void worker(void *arg)
         break;
     }
     case JOB_CONNECT:
-        if (!s_use_saved && tdsh_wifi_save(s_ssid, s_pass, s_user) != 0) {
+        if (!s_use_saved && tdsh_wifi_save(s_ssid, s_pass, s_user) != 0)
+        {
             set_msg("Could not save %.32s", s_ssid);
-        } else if (tdsh_wifi_connect_saved(s_ssid, s_user) == 0) {
+        }
+        else if (tdsh_wifi_connect_saved(s_ssid, s_user) == 0)
+        {
             set_msg("Connected to %.32s", s_ssid);
-        } else {
+        }
+        else
+        {
             set_msg("Could not connect to %.32s", s_ssid);
         }
         memset(s_pass, 0, sizeof(s_pass));
@@ -89,11 +102,13 @@ static void worker(void *arg)
 
 static bool start_job(job_t job)
 {
-    if (s_busy) return false;
+    if (s_busy)
+        return false;
     s_busy = true;
     s_job = job;
     snprintf(s_user, sizeof(s_user), "%s", td_session_user());
-    if (xTaskCreate(worker, "td_net", WORKER_STACK, NULL, 3, NULL) != pdPASS) {
+    if (xTaskCreate(worker, "td_net", WORKER_STACK, NULL, 3, NULL) != pdPASS)
+    {
         s_busy = false;
         set_msg("%s", "Not enough memory");
         return false;
@@ -112,21 +127,25 @@ static void ip_text(uint32_t addr, char *out, size_t cap)
 static void net_status(td_net_status_t *out)
 {
     int64_t now = esp_timer_get_time();
-    if (s_cache_us == 0 || now - s_cache_us > 1000000) {
+    if (s_cache_us == 0 || now - s_cache_us > 1000000)
+    {
         td_net_status_t st;
         memset(&st, 0, sizeof(st));
         tdsh_wifi_info_t wi;
-        if (tdsh_wifi_get_info(&wi) == 0 && wi.connected) {
+        if (tdsh_wifi_get_info(&wi) == 0 && wi.connected)
+        {
             st.wifi_up = true;
             snprintf(st.ssid, sizeof(st.ssid), "%s", wi.ssid);
             st.rssi = wi.rssi;
             ip_text(wi.ip.addr, st.wifi_ip, sizeof(st.wifi_ip));
         }
         tdsh_eth_info_t ei;
-        if (tdsh_eth_get_info(&ei) == 0) {
+        if (tdsh_eth_get_info(&ei) == 0)
+        {
             st.eth_present = ei.enabled;
             st.eth_up = ei.connected;
-            if (ei.connected) ip_text(ei.ip.addr, st.eth_ip, sizeof(st.eth_ip));
+            if (ei.connected)
+                ip_text(ei.ip.addr, st.eth_ip, sizeof(st.eth_ip));
         }
         s_cache = st;
         s_cache_us = now;
@@ -146,7 +165,8 @@ static bool net_scan(void)
 
 static int net_scan_results(td_wifi_ap_t *out, int max)
 {
-    if (!s_scan_done) return s_busy ? -1 : 0;
+    if (!s_scan_done)
+        return s_busy ? -1 : 0;
     xSemaphoreTake(s_lock, portMAX_DELAY);
     int n = s_ap_count < max ? s_ap_count : max;
     memcpy(out, s_aps, sizeof(td_wifi_ap_t) * (size_t)n);
@@ -156,21 +176,28 @@ static int net_scan_results(td_wifi_ap_t *out, int max)
 
 static bool net_connect(const char *ssid, const char *password)
 {
-    if (s_busy) return false;
+    if (s_busy)
+        return false;
     snprintf(s_ssid, sizeof(s_ssid), "%s", ssid);
     s_use_saved = password == NULL;
     snprintf(s_pass, sizeof(s_pass), "%s", password ? password : "");
     return start_job(JOB_CONNECT);
 }
 
-static bool net_disconnect(void) { return start_job(JOB_DISCONNECT); }
+static bool net_disconnect(void)
+{
+    return start_job(JOB_DISCONNECT);
+}
 
 static bool net_forget(const char *ssid)
 {
     int rc = tdsh_wifi_forget(ssid, td_session_user());
-    if (rc == -2) set_msg("%s", "Shared network: only root can forget it");
-    else if (rc != 0) set_msg("%s", "Could not forget that network");
-    else set_msg("Forgot %.32s", ssid);
+    if (rc == -2)
+        set_msg("%s", "Shared network: only root can forget it");
+    else if (rc != 0)
+        set_msg("%s", "Could not forget that network");
+    else
+        set_msg("Forgot %.32s", ssid);
     return rc == 0;
 }
 
@@ -179,27 +206,34 @@ static bool net_server_status(int which, int *port, int *clients)
     uint16_t p = 0;
     int c = 0;
     bool on = which == TD_SERVER_SSH ? tdsh_ssh_is_running(&p, &c) : tdsh_ftp_is_running(&p);
-    if (port) *port = p;
-    if (clients) *clients = c;
+    if (port)
+        *port = p;
+    if (clients)
+        *clients = c;
     return on;
 }
 
 static bool net_server_set(int which, bool on)
 {
-    if (on && !tdsh_remote_access_ready()) {
+    if (on && !tdsh_remote_access_ready())
+    {
         set_msg("%s", "First run passwd in Terminal (old: " TDSH_FACTORY_ROOT_PASSWORD ")");
         return false;
     }
-    if (s_busy) return false;
+    if (s_busy)
+        return false;
     const char *name = which == TD_SERVER_SSH ? "SSH/SFTP" : "FTP";
     int rc = which == TD_SERVER_SSH ? tdsh_ssh_set_running(on) : tdsh_ftp_set_running(on);
     char msg[64];
-    if (rc == 0) snprintf(msg, sizeof(msg), "%s server %s", name, on ? "started" : "stopped");
-    else if (on && !tdsh_network_is_online()) snprintf(msg, sizeof(msg), "%s: not started, no network", name);
+    if (rc == 0)
+        snprintf(msg, sizeof(msg), "%s server %s", name, on ? "started" : "stopped");
+    else if (on && !tdsh_network_is_online())
+        snprintf(msg, sizeof(msg), "%s: not started, no network", name);
     else if (on)
         snprintf(msg, sizeof(msg), "%s: not started (%u KB internal RAM free)", name,
                  (unsigned)(heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT) / 1024u));
-    else snprintf(msg, sizeof(msg), "%s server could not stop", name);
+    else
+        snprintf(msg, sizeof(msg), "%s server could not stop", name);
     set_msg("%s", msg);
     s_cache_us = 0;
     return true;
@@ -209,8 +243,8 @@ static void net_telnet_enable(bool on)
 {
     telnet_set_enabled(on);
     set_msg("%s", on && !telnet_enabled()
-        ? "Telnet: run passwd in Terminal (old: " TDSH_FACTORY_ROOT_PASSWORD ")"
-        : "Telnet is unencrypted; root login only");
+                      ? "Telnet: run passwd in Terminal (old: " TDSH_FACTORY_ROOT_PASSWORD ")"
+                      : "Telnet is unencrypted; root login only");
 }
 
 static const td_net_ops_t s_ops = {
@@ -229,6 +263,7 @@ static const td_net_ops_t s_ops = {
 
 const td_net_ops_t *net_esp_ops(void)
 {
-    if (!s_lock) s_lock = xSemaphoreCreateMutex();
+    if (!s_lock)
+        s_lock = xSemaphoreCreateMutex();
     return &s_ops;
 }

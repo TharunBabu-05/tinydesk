@@ -10,9 +10,9 @@
 #include "tinydesk/td.h"
 
 static const td_wifi_ap_t s_air[] = {
-    { "HomeNetwork", -48, true, true },
-    { "Cafe Guest", -70, false, false },
-    { "Neighbour-5G", -82, true, false },
+    {"HomeNetwork", -48, true, true},
+    {"Cafe Guest", -70, false, false},
+    {"Neighbour-5G", -82, true, false},
 };
 #define AIR ((int)(sizeof(s_air) / sizeof(s_air[0])))
 
@@ -23,12 +23,14 @@ static char s_msg[64];
 static uint32_t s_busy_until;
 static bool s_scan_pending;
 static bool s_telnet = true;
-static bool s_server_on[2] = { true, false };
+static bool s_server_on[2] = {true, false};
 
 static bool fake_server_status(int which, int *port, int *clients)
 {
-    if (port) *port = which == TD_SERVER_SSH ? 22 : 21;
-    if (clients) *clients = 0;
+    if (port)
+        *port = which == TD_SERVER_SSH ? 22 : 21;
+    if (clients)
+        *clients = 0;
     return s_server_on[which];
 }
 
@@ -38,7 +40,10 @@ static bool fake_server_set(int which, bool on)
     return true;
 }
 
-static bool busy(void) { return (int32_t)(s_busy_until - td_millis()) > 0; }
+static bool busy(void)
+{
+    return (int32_t)(s_busy_until - td_millis()) > 0;
+}
 
 static void fake_status(td_net_status_t *out)
 {
@@ -53,7 +58,8 @@ static void fake_status(td_net_status_t *out)
 
 static bool fake_scan(void)
 {
-    if (busy()) return false;
+    if (busy())
+        return false;
     s_busy_until = td_millis() + 600;
     s_scan_pending = true;
     return true;
@@ -61,11 +67,13 @@ static bool fake_scan(void)
 
 static int fake_results(td_wifi_ap_t *out, int max)
 {
-    if (busy()) return -1;
+    if (busy())
+        return -1;
     int n = AIR < max ? AIR : max;
     memcpy(out, s_air, sizeof(td_wifi_ap_t) * (size_t)n);
     for (int i = 0; i < n; i++)
-        if (s_known[i].ssid[0]) out[i].saved = true;
+        if (s_known[i].ssid[0])
+            out[i].saved = true;
     s_scan_pending = false;
     return n;
 }
@@ -78,7 +86,8 @@ static bool fake_connect(const char *ssid, const char *password)
     s_busy_until = td_millis() + 400;
     snprintf(s_msg, sizeof(s_msg), "Connected to %.32s", ssid);
     for (int i = 0; i < AIR; i++)
-        if (strcmp(s_air[i].ssid, ssid) == 0) s_known[i] = s_air[i];
+        if (strcmp(s_air[i].ssid, ssid) == 0)
+            s_known[i] = s_air[i];
     return true;
 }
 
@@ -92,13 +101,23 @@ static bool fake_disconnect(void)
 static bool fake_forget(const char *ssid)
 {
     for (int i = 0; i < AIR; i++)
-        if (strcmp(s_air[i].ssid, ssid) == 0) memset(&s_known[i], 0, sizeof(s_known[i]));
+        if (strcmp(s_air[i].ssid, ssid) == 0)
+            memset(&s_known[i], 0, sizeof(s_known[i]));
     return true;
 }
 
-static bool telnet_get(void) { return s_telnet; }
-static void telnet_set(bool on) { s_telnet = on; }
-static const char *telnet_peer(void) { return NULL; }
+static bool telnet_get(void)
+{
+    return s_telnet;
+}
+static void telnet_set(bool on)
+{
+    s_telnet = on;
+}
+static const char *telnet_peer(void)
+{
+    return NULL;
+}
 
 static const td_net_ops_t s_ops = {
     .status = fake_status,

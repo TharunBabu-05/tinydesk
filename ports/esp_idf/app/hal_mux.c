@@ -16,7 +16,8 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-typedef struct {
+typedef struct
+{
     uint8_t rx[64];              /* bytes fetched from the link, not yet read */
     int rx_len, rx_pos;
 } link_ctx_t;
@@ -25,9 +26,11 @@ static link_ctx_t s_ctx;
 
 static int local_read_byte(link_ctx_t *c)
 {
-    if (c->rx_pos == c->rx_len) {
+    if (c->rx_pos == c->rx_len)
+    {
         int n = link_read(c->rx, sizeof(c->rx));
-        if (n <= 0) return -1;
+        if (n <= 0)
+            return -1;
         c->rx_len = n;
         c->rx_pos = 0;
     }
@@ -55,7 +58,8 @@ static char s_local_user[32];    /* whose desktop the local link had before Teln
 /* Switch the desktop's user unless it is already theirs. */
 static void become(const char *user)
 {
-    if (user && user[0] && strcmp(user, td_session_user()) != 0) td_session_switch(user, true);
+    if (user && user[0] && strcmp(user, td_session_user()) != 0)
+        td_session_switch(user, true);
 }
 
 /* Follow the Telnet session: the desktop moves to the client (as the user
@@ -64,9 +68,11 @@ static void become(const char *user)
 static void follow_session(void)
 {
     bool remote = telnet_active();
-    if (remote == s_remote) return;
+    if (remote == s_remote)
+        return;
     s_remote = remote;
-    if (remote) {
+    if (remote)
+    {
         char note[160];
         const char *peer = telnet_peer();
         snprintf(note, sizeof(note),
@@ -76,7 +82,9 @@ static void follow_session(void)
         link_write((const uint8_t *)note, (int)strlen(note));
         snprintf(s_local_user, sizeof(s_local_user), "%s", td_session_user());
         become(telnet_user());
-    } else {
+    }
+    else
+    {
         become(s_local_user[0] ? s_local_user : "root");
     }
     td_full_redraw();
@@ -87,7 +95,8 @@ static int mux_read_byte(void *ctx)
     /* The main loop reads until -1 once per pass: poll Telnet on the first
      * read of each pass only. */
     static bool s_drained = true;
-    if (s_drained) {
+    if (s_drained)
+    {
         telnet_poll();
         follow_session();
     }
@@ -102,6 +111,9 @@ static int mux_write(void *ctx, const uint8_t *buf, int len)
     return s_remote ? telnet_write(buf, len) : link_write(buf, len);
 }
 
-static const td_hal_t s_hal = { mux_read_byte, mux_write, hal_millis, hal_sleep, &s_ctx };
+static const td_hal_t s_hal = {mux_read_byte, mux_write, hal_millis, hal_sleep, &s_ctx};
 
-const td_hal_t *hal_mux_init(void) { return link_init() ? &s_hal : NULL; }
+const td_hal_t *hal_mux_init(void)
+{
+    return link_init() ? &s_hal : NULL;
+}

@@ -16,7 +16,8 @@
 #define TD_LOG_LINE_MAX 100
 #endif
 
-typedef struct {
+typedef struct
+{
     char level;
     char text[TD_LOG_LINE_MAX];
 } log_line_t;
@@ -31,8 +32,16 @@ static void (*s_lock)(void *);
 static void (*s_unlock)(void *);
 static void *s_lock_ctx;
 
-static void lock(void) { if (s_lock) s_lock(s_lock_ctx); }
-static void unlock(void) { if (s_unlock) s_unlock(s_lock_ctx); }
+static void lock(void)
+{
+    if (s_lock)
+        s_lock(s_lock_ctx);
+}
+static void unlock(void)
+{
+    if (s_unlock)
+        s_unlock(s_lock_ctx);
+}
 
 void td_log_set_lock(void (*lock_fn)(void *), void (*unlock_fn)(void *), void *ctx)
 {
@@ -63,20 +72,28 @@ static void finish_line(void)
 void td_log_append(char level, const char *text)
 {
     lock();
-    for (const char *p = text; *p; p++) {
+    for (const char *p = text; *p; p++)
+    {
         char c = *p;
-        if (c == '\x1b') {                    /* drop colour escapes */
-            while (*p && *p != 'm') p++;
-            if (!*p) break;
+        if (c == '\x1b')
+        {                    /* drop colour escapes */
+            while (*p && *p != 'm')
+                p++;
+            if (!*p)
+                break;
             continue;
         }
-        if (c == '\r') continue;
-        if (c == '\n') {
+        if (c == '\r')
+            continue;
+        if (c == '\n')
+        {
             finish_line();
             continue;
         }
-        if (s_partial_len == 0) s_partial_level = level;
-        if (s_partial_len < TD_LOG_LINE_MAX - 1) s_partial[s_partial_len++] = (c == '\t') ? ' ' : c;
+        if (s_partial_len == 0)
+            s_partial_level = level;
+        if (s_partial_len < TD_LOG_LINE_MAX - 1)
+            s_partial[s_partial_len++] = (c == '\t') ? ' ' : c;
     }
     unlock();
 }
@@ -89,7 +106,8 @@ void td_logf(char level, const char *fmt, ...)
     vsnprintf(buf, sizeof(buf) - 1, fmt, ap);
     va_end(ap);
     size_t n = strlen(buf);
-    if (n == 0 || buf[n - 1] != '\n') strcat(buf, "\n");
+    if (n == 0 || buf[n - 1] != '\n')
+        strcat(buf, "\n");
     td_log_append(level, buf);
 }
 
@@ -116,25 +134,38 @@ static const char *get_item(td_widget_t *w, int index, int *fg, void *user)
     memcpy(s_item, l->text, sizeof(s_item));
     char level = l->level;
     unlock();
-    switch (level) {
-    case 'E': *fg = 9; break;     /* bright red */
-    case 'W': *fg = 11; break;    /* yellow */
-    case 'D': case 'V': *fg = 8; break;
-    default: *fg = 10; break;     /* green */
+    switch (level)
+    {
+    case 'E':
+        *fg = 9;
+        break;     /* bright red */
+    case 'W':
+        *fg = 11;
+        break;    /* yellow */
+    case 'D':
+    case 'V':
+        *fg = 8;
+        break;
+    default:
+        *fg = 10;
+        break;     /* green */
     }
     return s_item;
 }
 
 static void refresh(void)
 {
-    if (!s_list) return;             /* the window could not get its widgets */
+    if (!s_list)
+        return;             /* the window could not get its widgets */
     lock();
     uint32_t total = s_total;
     unlock();
     int count = (int)(total - first_visible(total));
-    if (count != s_list->count) {
+    if (count != s_list->count)
+    {
         td_list_set_count(s_list, count);
-        if (td_checkbox_get(s_follow)) td_list_select(s_list, count - 1);
+        if (td_checkbox_get(s_follow))
+            td_list_select(s_list, count - 1);
     }
     td_widget_printf(s_count, "%u lines", (unsigned)total);
 }
@@ -164,11 +195,13 @@ static void on_close(td_window_t *win)
 
 static void launch(void)
 {
-    if (td_win_is_open(s_win)) {
+    if (td_win_is_open(s_win))
+    {
         td_win_focus(s_win);
         return;
     }
-    if (!td_session_is_root()) {
+    if (!td_session_is_root())
+    {
         td_msgbox("Log Viewer", "Only root can read the system log.", "OK", NULL, NULL);
         return;
     }
@@ -183,7 +216,8 @@ static void launch(void)
         .tick_ms = 250,
     };
     s_win = td_win_create(&d);
-    if (!s_win) return;
+    if (!s_win)
+        return;
 
     s_list = td_list(s_win, td_rect(0, 0, -1, -1), get_item, NULL, NULL);
     td_scrollbar(s_win, -1, 0, -1, s_list);   /* right edge, above the buttons */
@@ -193,6 +227,9 @@ static void launch(void)
     refresh();
 }
 
-static const td_app_t s_app = { "Log Viewer", launch, "≡≡" };
+static const td_app_t s_app = {"Log Viewer", launch, "≡≡"};
 
-void td_logview_register(void) { td_app_register(&s_app); }
+void td_logview_register(void)
+{
+    td_app_register(&s_app);
+}

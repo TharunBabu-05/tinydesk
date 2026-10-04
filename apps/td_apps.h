@@ -88,8 +88,15 @@ void td_settings_apply_saved(void);
 bool td_settings_save(void);
 
 /* Taskbar clock preferences of the current user. */
-enum { TD_DATE_DMY = 0, TD_DATE_YMD = 1, TD_DATE_MDY = 2, TD_DATE_FORMATS = 3 };
-typedef struct {
+enum
+{
+    TD_DATE_DMY = 0,
+    TD_DATE_YMD = 1,
+    TD_DATE_MDY = 2,
+    TD_DATE_FORMATS = 3
+};
+typedef struct
+{
     uint8_t clock_12h;      /* 0: 24-hour */
     uint8_t date_format;    /* TD_DATE_* */
     uint8_t hide_clock;     /* 1: no date and time in the taskbar */
@@ -137,7 +144,8 @@ void td_proto_service_start(void);
 /* A program the Terminal app talks to (for example an embedded shell running
  * in its own task). All functions are called from the UI loop and must not
  * block. */
-typedef struct {
+typedef struct
+{
     const char *name;                                   /* shown in the title */
     /* Start the session if it is not running yet. */
     int (*start)(void *ctx, int cols, int rows);

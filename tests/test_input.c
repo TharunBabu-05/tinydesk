@@ -12,27 +12,34 @@ static uint32_t s_now = 1000;
  * advancing a little (as separate reads would). */
 static void feed(const char *s, int len, bool split)
 {
-    for (int i = 0; i < len; i++) {
+    for (int i = 0; i < len; i++)
+    {
         td_input_feed(&s_p, (uint8_t)s[i], s_now);
-        if (split) s_now += 1;
+        if (split)
+            s_now += 1;
     }
     td_input_poll_timeouts(&s_p, s_now);
 }
 
 #define FEED(lit, split) feed(lit, (int)sizeof(lit) - 1, split)
 
-static bool pop(td_event_t *ev) { return td_event_pop(ev); }
+static bool pop(td_event_t *ev)
+{
+    return td_event_pop(ev);
+}
 
 static void expect_key(const char *seq, int len, uint32_t key, uint8_t mods)
 {
-    for (int split = 0; split < 2; split++) {
+    for (int split = 0; split < 2; split++)
+    {
         td_event_clear();
         td_input_init(&s_p);
         feed(seq, len, split != 0);
         td_event_t ev;
         bool got = pop(&ev);
         CHECK(got);
-        if (!got) {
+        if (!got)
+        {
             printf("  no event for sequence (split=%d)\n", split);
             continue;
         }
@@ -112,7 +119,8 @@ static void test_lone_esc(void)
 
 static void test_mouse(void)
 {
-    for (int split = 0; split < 2; split++) {
+    for (int split = 0; split < 2; split++)
+    {
         td_event_clear();
         td_input_init(&s_p);
         td_event_t ev;

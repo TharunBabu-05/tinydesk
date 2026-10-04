@@ -28,14 +28,16 @@ typedef struct td_window td_window_t;
 typedef struct td_widget td_widget_t;
 
 /* A file or folder being dragged with the mouse. */
-typedef struct {
+typedef struct
+{
     char path[TD_PATH_MAX];   /* real path */
     char name[48];
     bool is_dir;
 } td_drag_item_t;
 
 /* Everything needed to open a window. Unused callbacks may be NULL. */
-typedef struct {
+typedef struct
+{
     const char *title;
     td_rect_t rect;         /* outer frame; x or y < 0 centres the window */
     uint16_t flags;
@@ -76,7 +78,8 @@ typedef struct {
 } td_window_desc_t;
 
 /* A window. Read the fields freely; change them through the functions. */
-struct td_window {
+struct td_window
+{
     bool used;
     uint8_t id;
     char title[TD_TITLE_MAX];
@@ -169,7 +172,8 @@ void td_wm_close_all(void);
 
 /* The taskbar clock (optional). text() fills in the clock (return false to
  * hide it); click() gets TD_BUTTON_LEFT or TD_BUTTON_RIGHT and the cell. */
-typedef struct {
+typedef struct
+{
     bool (*text)(char *buf, int cap);
     void (*click)(int button, int x, int y);
     /* Optional: the time and the date apart, for the small (time only) and
@@ -188,7 +192,12 @@ void td_wm_set_user_label(const char *label);
  *           with a row of space (falls back to one row if it won't fit)
  *   taskbar: small = short buttons and the time only, medium = one row,
  *           large = two rows: glyph + title buttons, time over date */
-typedef enum { TD_UI_SMALL, TD_UI_MEDIUM, TD_UI_LARGE } td_ui_size_t;
+typedef enum
+{
+    TD_UI_SMALL,
+    TD_UI_MEDIUM,
+    TD_UI_LARGE
+} td_ui_size_t;
 void td_wm_set_icon_size(td_ui_size_t size);
 td_ui_size_t td_wm_icon_size(void);
 void td_wm_set_start_menu_size(td_ui_size_t size);
@@ -227,7 +236,8 @@ bool td_wm_mouse_pos(int *x, int *y);
 
 /* -------------------------------------------------------------- apps */
 
-typedef struct {
+typedef struct
+{
     const char *name;        /* shown in the start menu and under the icon */
     void (*launch)(void);    /* open (or focus) the app's window */
     const char *icon;        /* two-cell desktop icon glyph, e.g. ">_" (NULL:
@@ -247,7 +257,8 @@ bool td_app_launch(const char *name);
 
 /* ------------------------------------------------------------- theme */
 
-typedef struct {
+typedef struct
+{
     const char *name;
     uint8_t desktop_fg, desktop_bg;
     uint8_t win_fg, win_bg;              /* window client area */
@@ -273,7 +284,7 @@ const td_theme_t *td_theme(void);
 
 /* Built-in themes: 0 = Classic, 1 = Dark (the default). */
 #define TD_THEME_CLASSIC 0
-#define TD_THEME_DARK 1
+#define TD_THEME_DARK    1
 #define TD_THEME_DEFAULT TD_THEME_DARK
 int td_theme_count(void);
 const td_theme_t *td_theme_get(int index);
@@ -290,7 +301,8 @@ bool td_desktop_icons(void);
 
 /* Extra desktop icons after the app icons, e.g. the files in a Desktop
  * folder. Index arguments count from 0 within the provider's items. */
-typedef struct {
+typedef struct
+{
     int (*count)(void *user);
     const char *(*label)(int index, void *user);
     const char *(*icon)(int index, void *user);      /* two cells, or NULL */

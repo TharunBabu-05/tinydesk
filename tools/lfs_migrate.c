@@ -21,10 +21,11 @@
 
 #include "lfs.h"
 
-#define BLOCK 4096
+#define BLOCK      4096
 #define ATTR_MTIME 't'
 
-typedef struct {
+typedef struct
+{
     uint8_t *data;
     size_t size;
 } image_t;
@@ -76,12 +77,14 @@ static void setup(struct lfs_config *cfg, image_t *im)
 static uint8_t *read_host(const char *path, size_t *len)
 {
     FILE *f = fopen(path, "rb");
-    if (!f) return NULL;
+    if (!f)
+        return NULL;
     fseek(f, 0, SEEK_END);
     long n = ftell(f);
     fseek(f, 0, SEEK_SET);
     uint8_t *buf = malloc(n > 0 ? (size_t)n : 1);
-    if (buf && fread(buf, 1, (size_t)n, f) != (size_t)n) {
+    if (buf && fread(buf, 1, (size_t)n, f) != (size_t)n)
+    {
         free(buf);
         buf = NULL;
     }
@@ -96,11 +99,13 @@ static long s_files, s_dirs, s_bytes;
 static uint8_t *read_lfs(lfs_t *fs, const char *path, lfs_size_t size)
 {
     lfs_file_t f;
-    if (lfs_file_open(fs, &f, path, LFS_O_RDONLY) < 0) return NULL;
+    if (lfs_file_open(fs, &f, path, LFS_O_RDONLY) < 0)
+        return NULL;
     uint8_t *buf = malloc(size ? size : 1);
     lfs_ssize_t n = buf ? lfs_file_read(fs, &f, buf, size) : -1;
     lfs_file_close(fs, &f);
-    if (n != (lfs_ssize_t)size) {
+    if (n != (lfs_ssize_t)size)
+    {
         free(buf);
         return NULL;
     }
@@ -111,7 +116,8 @@ static int write_lfs(lfs_t *fs, const char *path, const uint8_t *data, size_t si
 {
     lfs_file_t f;
     int rc = lfs_file_open(fs, &f, path, LFS_O_WRONLY | LFS_O_CREAT | LFS_O_TRUNC);
-    if (rc < 0) return rc;
+    if (rc < 0)
+        return rc;
     lfs_ssize_t n = size ? lfs_file_write(fs, &f, data, (lfs_size_t)size) : 0;
     rc = lfs_file_close(fs, &f);
     return n == (lfs_ssize_t)size ? rc : -1;
@@ -121,7 +127,8 @@ static void copy_attr(lfs_t *from, lfs_t *to, const char *path)
 {
     uint8_t attr[16];
     lfs_ssize_t n = lfs_getattr(from, path, ATTR_MTIME, attr, sizeof(attr));
-    if (n > 0) lfs_setattr(to, path, ATTR_MTIME, attr, (lfs_size_t)n);
+    if (n > 0)
+        lfs_setattr(to, path, ATTR_MTIME, attr, (lfs_size_t)n);
 }
 
 /* Copy folder `dir` (and below) from one image to the other. */
@@ -129,17 +136,22 @@ static int copy_tree(lfs_t *from, lfs_t *to, const char *dir)
 {
     lfs_dir_t d;
     struct lfs_info info;
-    if (lfs_dir_open(from, &d, dir) < 0) {
+    if (lfs_dir_open(from, &d, dir) < 0)
+    {
         fprintf(stderr, "cannot open folder %s\n", dir);
         return -1;
     }
     int rc = 0;
-    while (rc == 0 && lfs_dir_read(from, &d, &info) > 0) {
-        if (!strcmp(info.name, ".") || !strcmp(info.name, "..")) continue;
+    while (rc == 0 && lfs_dir_read(from, &d, &info) > 0)
+    {
+        if (!strcmp(info.name, ".") || !strcmp(info.name, ".."))
+            continue;
         char path[512];
         snprintf(path, sizeof(path), "%s%s%s", dir, strcmp(dir, "/") ? "/" : "", info.name);
-        if (info.type == LFS_TYPE_DIR) {
-            if (lfs_mkdir(to, path) < 0) {
+        if (info.type == LFS_TYPE_DIR)
+        {
+            if (lfs_mkdir(to, path) < 0)
+            {
                 fprintf(stderr, "mkdir %s failed\n", path);
                 rc = -1;
                 break;
@@ -148,9 +160,12 @@ static int copy_tree(lfs_t *from, lfs_t *to, const char *dir)
             s_dirs++;
             printf("  d          %s\n", path);
             rc = copy_tree(from, to, path);
-        } else {
+        }
+        else
+        {
             uint8_t *buf = read_lfs(from, path, info.size);
-            if (!buf || write_lfs(to, path, buf, info.size) < 0) {
+            if (!buf || write_lfs(to, path, buf, info.size) < 0)
+            {
                 fprintf(stderr, "copy %s failed (%s)\n", path, buf ? "write" : "read");
                 free(buf);
                 rc = -1;
@@ -172,21 +187,30 @@ static int compare_tree(lfs_t *a, lfs_t *b, const char *dir, long *checked)
 {
     lfs_dir_t d;
     struct lfs_info info;
-    if (lfs_dir_open(a, &d, dir) < 0) return -1;
+    if (lfs_dir_open(a, &d, dir) < 0)
+        return -1;
     int rc = 0;
-    while (rc == 0 && lfs_dir_read(a, &d, &info) > 0) {
-        if (!strcmp(info.name, ".") || !strcmp(info.name, "..")) continue;
+    while (rc == 0 && lfs_dir_read(a, &d, &info) > 0)
+    {
+        if (!strcmp(info.name, ".") || !strcmp(info.name, ".."))
+            continue;
         char path[512];
         snprintf(path, sizeof(path), "%s%s%s", dir, strcmp(dir, "/") ? "/" : "", info.name);
         struct lfs_info other;
-        if (lfs_stat(b, path, &other) < 0 || other.type != info.type) {
+        if (lfs_stat(b, path, &other) < 0 || other.type != info.type)
+        {
             fprintf(stderr, "missing in the new image: %s\n", path);
             rc = -1;
-        } else if (info.type == LFS_TYPE_DIR) {
+        }
+        else if (info.type == LFS_TYPE_DIR)
+        {
             rc = compare_tree(a, b, path, checked);
-        } else {
+        }
+        else
+        {
             uint8_t *x = read_lfs(a, path, info.size), *y = read_lfs(b, path, other.size);
-            if (!x || !y || other.size != info.size || memcmp(x, y, info.size) != 0) {
+            if (!x || !y || other.size != info.size || memcmp(x, y, info.size) != 0)
+            {
                 fprintf(stderr, "different in the new image: %s\n", path);
                 rc = -1;
             }
@@ -203,11 +227,14 @@ static int mkdirs(lfs_t *fs, const char *path)
 {
     char p[512];
     snprintf(p, sizeof(p), "%s", path);
-    for (char *s = p + 1; *s; s++) {
-        if (*s != '/') continue;
+    for (char *s = p + 1; *s; s++)
+    {
+        if (*s != '/')
+            continue;
         *s = '\0';
         int rc = lfs_mkdir(fs, p);
-        if (rc < 0 && rc != LFS_ERR_EXIST) return rc;
+        if (rc < 0 && rc != LFS_ERR_EXIST)
+            return rc;
         *s = '/';
     }
     return 0;
@@ -215,18 +242,21 @@ static int mkdirs(lfs_t *fs, const char *path)
 
 int main(int argc, char **argv)
 {
-    if (argc < 4) {
+    if (argc < 4)
+    {
         fprintf(stderr, "usage: lfs_migrate <old.img> <new.img> <new-size> [--add <host-file> <fs-path>]...\n");
         return 2;
     }
     image_t old_im, new_im;
     old_im.data = read_host(argv[1], &old_im.size);
-    if (!old_im.data || old_im.size % BLOCK) {
+    if (!old_im.data || old_im.size % BLOCK)
+    {
         fprintf(stderr, "cannot read %s (or its size is not a multiple of %d)\n", argv[1], BLOCK);
         return 1;
     }
     new_im.size = (size_t)strtoul(argv[3], NULL, 0);
-    if (!new_im.size || new_im.size % BLOCK) {
+    if (!new_im.size || new_im.size % BLOCK)
+    {
         fprintf(stderr, "bad new size\n");
         return 1;
     }
@@ -237,24 +267,30 @@ int main(int argc, char **argv)
     lfs_t ofs, nfs;
     setup(&oc, &old_im);
     setup(&nc, &new_im);
-    if (lfs_mount(&ofs, &oc) < 0) {
+    if (lfs_mount(&ofs, &oc) < 0)
+    {
         fprintf(stderr, "the old image does not mount as LittleFS\n");
         return 1;
     }
     printf("old image: %lu blocks, %ld used\n", (unsigned long)oc.block_count, (long)lfs_fs_size(&ofs));
-    if (lfs_format(&nfs, &nc) < 0 || lfs_mount(&nfs, &nc) < 0) {
+    if (lfs_format(&nfs, &nc) < 0 || lfs_mount(&nfs, &nc) < 0)
+    {
         fprintf(stderr, "cannot create the new image\n");
         return 1;
     }
     copy_attr(&ofs, &nfs, "/");
-    if (copy_tree(&ofs, &nfs, "/") < 0) return 1;
+    if (copy_tree(&ofs, &nfs, "/") < 0)
+        return 1;
     printf("copied %ld files (%ld bytes) and %ld folders\n", s_files, s_bytes, s_dirs);
 
-    for (int i = 4; i + 2 < argc + 0 && i < argc; i++) {
-        if (strcmp(argv[i], "--add") || i + 2 >= argc) continue;
+    for (int i = 4; i + 2 < argc + 0 && i < argc; i++)
+    {
+        if (strcmp(argv[i], "--add") || i + 2 >= argc)
+            continue;
         size_t len;
         uint8_t *buf = read_host(argv[i + 1], &len);
-        if (!buf || mkdirs(&nfs, argv[i + 2]) < 0 || write_lfs(&nfs, argv[i + 2], buf, len) < 0) {
+        if (!buf || mkdirs(&nfs, argv[i + 2]) < 0 || write_lfs(&nfs, argv[i + 2], buf, len) < 0)
+        {
             fprintf(stderr, "cannot add %s as %s\n", argv[i + 1], argv[i + 2]);
             return 1;
         }
@@ -267,18 +303,21 @@ int main(int argc, char **argv)
 
     /* Read it back from scratch and compare. */
     lfs_t check;
-    if (lfs_mount(&check, &nc) < 0) {
+    if (lfs_mount(&check, &nc) < 0)
+    {
         fprintf(stderr, "the new image does not mount\n");
         return 1;
     }
     long checked = 0;
-    if (compare_tree(&ofs, &check, "/", &checked) < 0) return 1;
+    if (compare_tree(&ofs, &check, "/", &checked) < 0)
+        return 1;
     printf("verified: all %ld files match\n", checked);
     lfs_unmount(&check);
     lfs_unmount(&ofs);
 
     FILE *out = fopen(argv[2], "wb");
-    if (!out || fwrite(new_im.data, 1, new_im.size, out) != new_im.size || fclose(out) != 0) {
+    if (!out || fwrite(new_im.data, 1, new_im.size, out) != new_im.size || fclose(out) != 0)
+    {
         fprintf(stderr, "cannot write %s\n", argv[2]);
         return 1;
     }

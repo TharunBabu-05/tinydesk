@@ -46,8 +46,8 @@
 
 static const char *TAG = "ota";
 
-#define CHUNK 4096
-#define URL_TASK_STACK 8192     /* HTTPS handshake */
+#define CHUNK           4096
+#define URL_TASK_STACK  8192     /* HTTPS handshake */
 #define FILE_TASK_STACK 4096
 
 static SemaphoreHandle_t s_lock;
@@ -66,13 +66,23 @@ static int64_t s_start_us;
 #define UPDATE_BOARD "esp32"          /* the classic ESP32 with PSRAM; the 4 MB one has no OTA */
 #endif
 #define FEED_MAX 2048
-enum { JOB_IMAGE, JOB_FEED };
+enum
+{
+    JOB_IMAGE,
+    JOB_FEED
+};
 static int s_job;
 static bool s_quiet;                  /* a background feed check: status() stays */
 static td_ota_release_t s_rel;
 
-static void lock(void) { xSemaphoreTake(s_lock, portMAX_DELAY); }
-static void unlock(void) { xSemaphoreGive(s_lock); }
+static void lock(void)
+{
+    xSemaphoreTake(s_lock, portMAX_DELAY);
+}
+static void unlock(void)
+{
+    xSemaphoreGive(s_lock);
+}
 
 static void set_state(int state, const char *fmt, ...)
 {
@@ -130,42 +140,50 @@ static void from_url(void)
         .buffer_size = 2048,
         .buffer_size_tx = 1024,
     };
-    if (!strncmp(s_source, "https://", 8)) http.crt_bundle_attach = esp_crt_bundle_attach;
-    esp_https_ota_config_t cfg = { .http_config = &http };
+    if (!strncmp(s_source, "https://", 8))
+        http.crt_bundle_attach = esp_crt_bundle_attach;
+    esp_https_ota_config_t cfg = {.http_config = &http};
     esp_https_ota_handle_t h = NULL;
     esp_err_t err = esp_https_ota_begin(&cfg, &h);
-    if (err != ESP_OK) {
+    if (err != ESP_OK)
+    {
         set_state(TD_OTA_FAILED, "Cannot download it: %s", esp_err_to_name(err));
         return;
     }
     esp_app_desc_t d;
-    if (esp_https_ota_get_img_desc(h, &d) == ESP_OK) set_new_version(&d);
-    if (s_check_only) {
+    if (esp_https_ota_get_img_desc(h, &d) == ESP_OK)
+        set_new_version(&d);
+    if (s_check_only)
+    {
         esp_https_ota_abort(h);
         report_check();
         return;
     }
     int size = esp_https_ota_get_image_size(h);
     set_state(TD_OTA_INSTALLING, "Downloading and installing version %s...", d.version);
-    for (;;) {
+    for (;;)
+    {
         err = esp_https_ota_perform(h);
         set_progress((uint32_t)esp_https_ota_get_image_len_read(h), size > 0 ? (uint32_t)size : 0);
-        if (err != ESP_ERR_HTTPS_OTA_IN_PROGRESS) break;
-        if (s_cancel) {
+        if (err != ESP_ERR_HTTPS_OTA_IN_PROGRESS)
+            break;
+        if (s_cancel)
+        {
             esp_https_ota_abort(h);
             set_state(TD_OTA_FAILED, "Cancelled. The installed version is unchanged.");
             return;
         }
     }
-    if (err != ESP_OK || !esp_https_ota_is_complete_data_received(h)) {
+    if (err != ESP_OK || !esp_https_ota_is_complete_data_received(h))
+    {
         esp_https_ota_abort(h);
         set_state(TD_OTA_FAILED, "Download failed: %s", esp_err_to_name(err));
         return;
     }
     err = esp_https_ota_finish(h);     /* checks the image, sets the boot slot */
-    if (err != ESP_OK) {
-        set_state(TD_OTA_FAILED, err == ESP_ERR_OTA_VALIDATE_FAILED ? "The image is damaged or not for this chip."
-                                                                     : "Could not finish: %s",
+    if (err != ESP_OK)
+    {
+        set_state(TD_OTA_FAILED, err == ESP_ERR_OTA_VALIDATE_FAILED ? "The image is damaged or not for this chip." : "Could not finish: %s",
                   esp_err_to_name(err));
         return;
     }
@@ -177,7 +195,8 @@ static void from_url(void)
 static void from_file(void)
 {
     FILE *f = fopen(s_source, "rb");
-    if (!f) {
+    if (!f)
+    {
         set_state(TD_OTA_FAILED, "Cannot open the file.");
         return;
     }
@@ -185,7 +204,8 @@ static void from_file(void)
     long size = ftell(f);
     fseek(f, 0, SEEK_SET);
     uint8_t *buf = malloc(CHUNK);
-    if (!buf) {
+    if (!buf)
+    {
         fclose(f);
         set_state(TD_OTA_FAILED, "Not enough memory.");
         return;
@@ -193,55 +213,65 @@ static void from_file(void)
     size_t n = fread(buf, 1, CHUNK, f);
     const size_t desc_at = sizeof(esp_image_header_t) + sizeof(esp_image_segment_header_t);
     esp_app_desc_t d;
-    if (n < desc_at + sizeof(d) || buf[0] != ESP_IMAGE_HEADER_MAGIC) {
+    if (n < desc_at + sizeof(d) || buf[0] != ESP_IMAGE_HEADER_MAGIC)
+    {
         set_state(TD_OTA_FAILED, "That is not an ESP32 firmware image (.bin).");
         goto out;
     }
     memcpy(&d, buf + desc_at, sizeof(d));
-    if (d.magic_word != ESP_APP_DESC_MAGIC_WORD) {
+    if (d.magic_word != ESP_APP_DESC_MAGIC_WORD)
+    {
         set_state(TD_OTA_FAILED, "That is not an application image.");
         goto out;
     }
     set_new_version(&d);
-    if (s_check_only) {
+    if (s_check_only)
+    {
         report_check();
         goto out;
     }
     const esp_partition_t *next = esp_ota_get_next_update_partition(NULL);
-    if (!next || (uint32_t)size > next->size) {
+    if (!next || (uint32_t)size > next->size)
+    {
         set_state(TD_OTA_FAILED, "The image (%ld KB) does not fit the update slot.", size / 1024);
         goto out;
     }
     esp_ota_handle_t h;
     esp_err_t err = esp_ota_begin(next, OTA_WITH_SEQUENTIAL_WRITES, &h);
-    if (err != ESP_OK) {
+    if (err != ESP_OK)
+    {
         set_state(TD_OTA_FAILED, "Cannot start: %s", esp_err_to_name(err));
         goto out;
     }
     set_state(TD_OTA_INSTALLING, "Installing version %s...", d.version);
     uint32_t done = 0;
-    while (n > 0) {
+    while (n > 0)
+    {
         err = esp_ota_write(h, buf, n);
-        if (err != ESP_OK) break;
+        if (err != ESP_OK)
+            break;
         done += (uint32_t)n;
         set_progress(done, (uint32_t)size);
-        if (s_cancel) {
+        if (s_cancel)
+        {
             esp_ota_abort(h);
             set_state(TD_OTA_FAILED, "Cancelled. The installed version is unchanged.");
             goto out;
         }
         n = fread(buf, 1, CHUNK, f);
     }
-    if (err != ESP_OK) {
+    if (err != ESP_OK)
+    {
         esp_ota_abort(h);
         set_state(TD_OTA_FAILED, "Writing failed: %s", esp_err_to_name(err));
         goto out;
     }
     err = esp_ota_end(h);
-    if (err == ESP_OK) err = esp_ota_set_boot_partition(next);
-    if (err != ESP_OK) {
-        set_state(TD_OTA_FAILED, err == ESP_ERR_OTA_VALIDATE_FAILED ? "The image is damaged or not for this chip."
-                                                                     : "Could not finish: %s",
+    if (err == ESP_OK)
+        err = esp_ota_set_boot_partition(next);
+    if (err != ESP_OK)
+    {
+        set_state(TD_OTA_FAILED, err == ESP_ERR_OTA_VALIDATE_FAILED ? "The image is damaged or not for this chip." : "Could not finish: %s",
                   esp_err_to_name(err));
         goto out;
     }
@@ -251,25 +281,34 @@ out:
     fclose(f);
 }
 
-static bool is_url(const char *s) { return !strncmp(s, "http://", 7) || !strncmp(s, "https://", 8); }
+static bool is_url(const char *s)
+{
+    return !strncmp(s, "http://", 7) || !strncmp(s, "https://", 8);
+}
 
 /* ---------------------------------------------------- official releases */
 
 static void feed_url(char *out, size_t cap)
 {
     const char *u = tdsh_board_get("update.url");
-    if (u && is_url(u)) snprintf(out, cap, "%s", u);
-    else snprintf(out, cap, "%supdate-desktop-%s.json", UPDATE_SITE, UPDATE_BOARD);
+    if (u && is_url(u))
+        snprintf(out, cap, "%s", u);
+    else
+        snprintf(out, cap, "%supdate-desktop-%s.json", UPDATE_SITE, UPDATE_BOARD);
 }
 
 /* "0.1.10" > "0.1.9": the first three numbers, anything after them ignored. */
 static bool version_newer(const char *a, const char *b)
 {
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 3; i++)
+    {
         unsigned long x = strtoul(a, (char **)&a, 10), y = strtoul(b, (char **)&b, 10);
-        if (x != y) return x > y;
-        if (*a == '.') a++;
-        if (*b == '.') b++;
+        if (x != y)
+            return x > y;
+        if (*a == '.')
+            a++;
+        if (*b == '.')
+            b++;
     }
     return false;
 }
@@ -283,34 +322,42 @@ static int http_get_small(const char *url, char *buf, int cap, char *err, size_t
         .buffer_size = 2048,
         .buffer_size_tx = 1024,
     };
-    if (!strncmp(url, "https://", 8)) http.crt_bundle_attach = esp_crt_bundle_attach;
+    if (!strncmp(url, "https://", 8))
+        http.crt_bundle_attach = esp_crt_bundle_attach;
     esp_http_client_handle_t c = esp_http_client_init(&http);
-    if (!c) {
+    if (!c)
+    {
         snprintf(err, err_cap, "Not enough memory to connect.");
         return -1;
     }
     int n = -1;
     esp_err_t e = esp_http_client_open(c, 0);
-    if (e != ESP_OK) {
+    if (e != ESP_OK)
+    {
         snprintf(err, err_cap, "Cannot reach the update server: %s", esp_err_to_name(e));
         goto out;
     }
     esp_http_client_fetch_headers(c);
     int code = esp_http_client_get_status_code(c);
-    if (code == 404) {
+    if (code == 404)
+    {
         snprintf(err, err_cap, "No update information for this board on the server (404).");
         goto out;
     }
-    if (code != 200) {
+    if (code != 200)
+    {
         snprintf(err, err_cap, "The update server answered HTTP %d.", code);
         goto out;
     }
     n = 0;
-    for (;;) {
+    for (;;)
+    {
         int r = esp_http_client_read(c, buf + n, cap - 1 - n);
-        if (r <= 0) break;
+        if (r <= 0)
+            break;
         n += r;
-        if (n >= cap - 1) {
+        if (n >= cap - 1)
+        {
             snprintf(err, err_cap, "The update information is too large.");
             n = -1;
             goto out;
@@ -333,25 +380,32 @@ static void from_feed(void)
 {
     char url[200], err[96] = "";
     feed_url(url, sizeof(url));
-    td_ota_release_t r = { 0 };
+    td_ota_release_t r = {0};
     char *buf = malloc(FEED_MAX);
     int n = buf ? http_get_small(url, buf, FEED_MAX, err, sizeof(err)) : -1;
-    if (!buf) snprintf(err, sizeof(err), "Not enough memory to check.");
+    if (!buf)
+        snprintf(err, sizeof(err), "Not enough memory to check.");
     cJSON *j = n > 0 ? cJSON_Parse(buf) : NULL;
-    if (n > 0 && !j) snprintf(err, sizeof(err), "The update information is not valid JSON.");
+    if (n > 0 && !j)
+        snprintf(err, sizeof(err), "The update information is not valid JSON.");
     const char *ver = j ? json_str(j, "version") : "";
     const char *image = j ? json_str(j, "image") : "";
-    if (j && (!ver[0] || !image[0])) snprintf(err, sizeof(err), "The update information has no version or image.");
-    if (!err[0]) {
+    if (j && (!ver[0] || !image[0]))
+        snprintf(err, sizeof(err), "The update information has no version or image.");
+    if (!err[0])
+    {
         r.valid = true;
         snprintf(r.version, sizeof(r.version), "%s", ver);
         snprintf(r.date, sizeof(r.date), "%s", json_str(j, "date"));
         snprintf(r.notes, sizeof(r.notes), "%s", json_str(j, "notes"));
         const cJSON *size = cJSON_GetObjectItemCaseSensitive(j, "size");
         r.size = cJSON_IsNumber(size) && size->valuedouble > 0 ? (uint32_t)size->valuedouble : 0;
-        if (is_url(image)) {
+        if (is_url(image))
+        {
             snprintf(r.url, sizeof(r.url), "%s", image);
-        } else {                               /* relative to the feed */
+        }
+        else
+        {                               /* relative to the feed */
             const char *slash = strrchr(url, '/');
             int base = slash ? (int)(slash - url) + 1 : 0;
             snprintf(r.url, sizeof(r.url), "%.*s%s", base, url, image);
@@ -365,7 +419,8 @@ static void from_feed(void)
     lock();
     r.checks = s_rel.checks + 1;
     snprintf(r.error, sizeof(r.error), "%s", err);
-    if (!r.valid && s_rel.valid) {          /* keep what was known; note the failure */
+    if (!r.valid && s_rel.valid)
+    {          /* keep what was known; note the failure */
         td_ota_release_t keep = s_rel;
         snprintf(keep.error, sizeof(keep.error), "%s", err);
         keep.checks = r.checks;
@@ -373,23 +428,31 @@ static void from_feed(void)
     }
     s_rel = r;
     unlock();
-    if (s_quiet) {
+    if (s_quiet)
+    {
         ESP_LOGI(TAG, "official release check: %s", err[0] ? err : r.version);
         return;
     }
-    if (err[0]) set_state(TD_OTA_FAILED, "%s", err);
-    else if (r.newer) set_state(TD_OTA_IDLE, "TinyDesk %s is available (installed: %s). Install it?", r.version, mine);
-    else if (!strcmp(r.version, mine)) set_state(TD_OTA_IDLE, "TinyDesk %s, the newest release, is installed.", mine);
-    else set_state(TD_OTA_IDLE, "Installed %s is newer than the newest release (%s).", mine, r.version);
+    if (err[0])
+        set_state(TD_OTA_FAILED, "%s", err);
+    else if (r.newer)
+        set_state(TD_OTA_IDLE, "TinyDesk %s is available (installed: %s). Install it?", r.version, mine);
+    else if (!strcmp(r.version, mine))
+        set_state(TD_OTA_IDLE, "TinyDesk %s, the newest release, is installed.", mine);
+    else
+        set_state(TD_OTA_IDLE, "Installed %s is newer than the newest release (%s).", mine, r.version);
 }
 
 static void ota_task(void *arg)
 {
     (void)arg;
     s_start_us = esp_timer_get_time();
-    if (s_job == JOB_FEED) from_feed();
-    else if (is_url(s_source)) from_url();
-    else from_file();
+    if (s_job == JOB_FEED)
+        from_feed();
+    else if (is_url(s_source))
+        from_url();
+    else
+        from_file();
     s_busy = false;
     vTaskDelete(NULL);
 }
@@ -406,12 +469,16 @@ static void ota_info(td_ota_info_t *out)
     const esp_partition_t *run = esp_ota_get_running_partition();
     const esp_partition_t *next = esp_ota_get_next_update_partition(NULL);
     const esp_partition_t *boot = esp_ota_get_boot_partition();
-    if (run) snprintf(out->running, sizeof(out->running), "%s", run->label);
-    if (next) snprintf(out->next, sizeof(out->next), "%s", next->label);
+    if (run)
+        snprintf(out->running, sizeof(out->running), "%s", run->label);
+    if (next)
+        snprintf(out->next, sizeof(out->next), "%s", next->label);
     esp_ota_img_states_t st;
-    if (run && esp_ota_get_state_partition(run, &st) == ESP_OK) out->on_trial = st == ESP_OTA_IMG_PENDING_VERIFY;
+    if (run && esp_ota_get_state_partition(run, &st) == ESP_OK)
+        out->on_trial = st == ESP_OTA_IMG_PENDING_VERIFY;
     esp_app_desc_t od;
-    if (next && esp_ota_get_partition_description(next, &od) == ESP_OK) {
+    if (next && esp_ota_get_partition_description(next, &od) == ESP_OK)
+    {
         snprintf(out->other_version, sizeof(out->other_version), "%s", od.version);
         esp_ota_img_states_t ost = ESP_OTA_IMG_UNDEFINED;
         esp_ota_get_state_partition(next, &ost);
@@ -422,7 +489,8 @@ static void ota_info(td_ota_info_t *out)
 
 static bool ota_start(const char *source, bool check_only)
 {
-    if (s_busy || !source || !source[0]) return false;
+    if (s_busy || !source || !source[0])
+        return false;
     s_job = JOB_IMAGE;
     snprintf(s_source, sizeof(s_source), "%s", source);
     s_check_only = check_only;
@@ -434,7 +502,8 @@ static bool ota_start(const char *source, bool check_only)
     snprintf(s_st.message, sizeof(s_st.message), "%s", check_only ? "Checking..." : "Starting...");
     unlock();
     s_busy = true;
-    if (xTaskCreate(ota_task, "td_ota", is_url(source) ? URL_TASK_STACK : FILE_TASK_STACK, NULL, 4, NULL) != pdPASS) {
+    if (xTaskCreate(ota_task, "td_ota", is_url(source) ? URL_TASK_STACK : FILE_TASK_STACK, NULL, 4, NULL) != pdPASS)
+    {
         s_busy = false;
         set_state(TD_OTA_FAILED, "Not enough memory to start.");
         return false;
@@ -449,7 +518,10 @@ static void ota_status(td_ota_status_t *out)
     unlock();
 }
 
-static void ota_cancel(void) { s_cancel = true; }
+static void ota_cancel(void)
+{
+    s_cancel = true;
+}
 
 static void ota_restart(void)
 {
@@ -462,24 +534,29 @@ static bool ota_roll_back(void)
 {
     const esp_partition_t *run = esp_ota_get_running_partition();
     esp_ota_img_states_t st;
-    if (run && esp_ota_get_state_partition(run, &st) == ESP_OK && st == ESP_OTA_IMG_PENDING_VERIFY) {
+    if (run && esp_ota_get_state_partition(run, &st) == ESP_OK && st == ESP_OTA_IMG_PENDING_VERIFY)
+    {
         esp_ota_mark_app_invalid_rollback_and_reboot();   /* does not return on success */
         return false;
     }
     const esp_partition_t *other = esp_ota_get_next_update_partition(NULL);
     esp_app_desc_t d;
-    if (!other || esp_ota_get_partition_description(other, &d) != ESP_OK) return false;
-    if (esp_ota_set_boot_partition(other) != ESP_OK) return false;
+    if (!other || esp_ota_get_partition_description(other, &d) != ESP_OK)
+        return false;
+    if (esp_ota_set_boot_partition(other) != ESP_OK)
+        return false;
     ota_restart();
     return true;
 }
 
 static bool ota_check_official(bool quiet)
 {
-    if (s_busy) return false;
+    if (s_busy)
+        return false;
     s_job = JOB_FEED;
     s_quiet = quiet;
-    if (!quiet) {
+    if (!quiet)
+    {
         lock();
         memset(&s_st, 0, sizeof(s_st));
         s_st.state = TD_OTA_CHECKING;
@@ -488,9 +565,11 @@ static bool ota_check_official(bool quiet)
         unlock();
     }
     s_busy = true;
-    if (xTaskCreate(ota_task, "td_ota", URL_TASK_STACK, NULL, 4, NULL) != pdPASS) {
+    if (xTaskCreate(ota_task, "td_ota", URL_TASK_STACK, NULL, 4, NULL) != pdPASS)
+    {
         s_busy = false;
-        if (!quiet) set_state(TD_OTA_FAILED, "Not enough memory to check.");
+        if (!quiet)
+            set_state(TD_OTA_FAILED, "Not enough memory to check.");
         return false;
     }
     return true;
@@ -508,7 +587,8 @@ static bool ota_auto_check(void)
 {
     nvs_handle_t h;
     uint8_t v = 1;
-    if (nvs_open("td_update", NVS_READONLY, &h) == ESP_OK) {
+    if (nvs_open("td_update", NVS_READONLY, &h) == ESP_OK)
+    {
         nvs_get_u8(h, "auto", &v);
         nvs_close(h);
     }
@@ -518,7 +598,8 @@ static bool ota_auto_check(void)
 static void ota_set_auto_check(bool on)
 {
     nvs_handle_t h;
-    if (nvs_open("td_update", NVS_READWRITE, &h) != ESP_OK) return;
+    if (nvs_open("td_update", NVS_READWRITE, &h) != ESP_OK)
+        return;
     nvs_set_u8(h, "auto", on ? 1 : 0);
     nvs_commit(h);
     nvs_close(h);
@@ -528,16 +609,19 @@ static void ota_notified(char *out, int cap)
 {
     nvs_handle_t h;
     out[0] = '\0';
-    if (nvs_open("td_update", NVS_READONLY, &h) != ESP_OK) return;
+    if (nvs_open("td_update", NVS_READONLY, &h) != ESP_OK)
+        return;
     size_t n = (size_t)cap;
-    if (nvs_get_str(h, "told", out, &n) != ESP_OK) out[0] = '\0';
+    if (nvs_get_str(h, "told", out, &n) != ESP_OK)
+        out[0] = '\0';
     nvs_close(h);
 }
 
 static void ota_set_notified(const char *version)
 {
     nvs_handle_t h;
-    if (nvs_open("td_update", NVS_READWRITE, &h) != ESP_OK) return;
+    if (nvs_open("td_update", NVS_READWRITE, &h) != ESP_OK)
+        return;
     nvs_set_str(h, "told", version ? version : "");
     nvs_commit(h);
     nvs_close(h);
@@ -564,12 +648,14 @@ static const td_ota_ops_t s_ops = {
  * here (no shutdown handlers run), so they still roll back. */
 static void on_shutdown(void)
 {
-    if (esp_timer_get_time() >= 5 * 1000000LL) ota_esp_boot_ok();
+    if (esp_timer_get_time() >= 5 * 1000000LL)
+        ota_esp_boot_ok();
 }
 
 const td_ota_ops_t *ota_esp_ops(void)
 {
-    if (!s_lock) {
+    if (!s_lock)
+    {
         s_lock = xSemaphoreCreateMutex();
         esp_register_shutdown_handler(on_shutdown);
     }
@@ -580,7 +666,8 @@ void ota_esp_boot_ok(void)
 {
     const esp_partition_t *run = esp_ota_get_running_partition();
     esp_ota_img_states_t st;
-    if (run && esp_ota_get_state_partition(run, &st) == ESP_OK && st == ESP_OTA_IMG_PENDING_VERIFY) {
+    if (run && esp_ota_get_state_partition(run, &st) == ESP_OK && st == ESP_OTA_IMG_PENDING_VERIFY)
+    {
         esp_ota_mark_app_valid_cancel_rollback();
         ESP_LOGI(TAG, "this firmware (%s) is confirmed", esp_app_get_description()->version);
     }
@@ -604,15 +691,18 @@ static int wait_job(void)
 {
     int last = -10;
     td_ota_status_t st;
-    for (;;) {
+    for (;;)
+    {
         ota_status(&st);
-        if (st.state == TD_OTA_INSTALLING && st.percent >= last + 10) {
+        if (st.state == TD_OTA_INSTALLING && st.percent >= last + 10)
+        {
             printf("  %3d%%  %u of %u KB  %u KB/s\n", st.percent, (unsigned)(st.done / 1024),
                    (unsigned)(st.total / 1024), (unsigned)(st.bytes_per_s / 1024));
             fflush(stdout);
             last = st.percent;
         }
-        if (!s_busy) break;
+        if (!s_busy)
+            break;
         vTaskDelay(pdMS_TO_TICKS(250));
     }
     ota_status(&st);
@@ -623,71 +713,91 @@ static int wait_job(void)
 static int cmd_ota(tdsh_session_t *session, int argc, char **argv)
 {
     const char *op = argc > 1 ? argv[1] : "status";
-    if (!strcmp(op, "status")) {
+    if (!strcmp(op, "status"))
+    {
         print_info();
         td_ota_status_t st;
         ota_status(&st);
-        if (st.message[0]) printf("Last:      %s\n", st.message);
+        if (st.message[0])
+            printf("Last:      %s\n", st.message);
         return 0;
     }
-    if ((!strcmp(op, "check") || !strcmp(op, "install")) && argc == 3) {
+    if ((!strcmp(op, "check") || !strcmp(op, "install")) && argc == 3)
+    {
         char real[200];
         const char *src = argv[2];
-        if (!is_url(src)) {
-            if (tdsh_path_to_real(session, src, real, sizeof(real), NULL, 0) != 0) {
+        if (!is_url(src))
+        {
+            if (tdsh_path_to_real(session, src, real, sizeof(real), NULL, 0) != 0)
+            {
                 printf("ota: %s is not allowed\n", src);
                 return 1;
             }
             src = real;
         }
-        if (!ota_start(src, !strcmp(op, "check"))) {
+        if (!ota_start(src, !strcmp(op, "check")))
+        {
             printf("ota: an update is already running\n");
             return 1;
         }
         return wait_job();
     }
-    if (!strcmp(op, "official") && argc == 2) {
-        if (!ota_check_official(false)) {
+    if (!strcmp(op, "official") && argc == 2)
+    {
+        if (!ota_check_official(false))
+        {
             printf("ota: an update is already running\n");
             return 1;
         }
         int rc = wait_job();
         td_ota_release_t r;
         ota_official(&r);
-        if (rc == 0 && r.valid) {
+        if (rc == 0 && r.valid)
+        {
             printf("Newest:    TinyDesk %s%s%s, %u KB\n", r.version, r.date[0] ? " of " : "", r.date,
                    (unsigned)(r.size / 1024));
             printf("Image:     %s\n", r.url);
-            if (r.notes[0]) printf("Notes:     %s\n", r.notes);
-            if (r.newer) printf("Install:   ota install %s\n", r.url);
+            if (r.notes[0])
+                printf("Notes:     %s\n", r.notes);
+            if (r.newer)
+                printf("Install:   ota install %s\n", r.url);
         }
         return rc;
     }
-    if (!strcmp(op, "notify")) {
-        if (argc == 3 && (!strcmp(argv[2], "on") || !strcmp(argv[2], "off"))) {
+    if (!strcmp(op, "notify"))
+    {
+        if (argc == 3 && (!strcmp(argv[2], "on") || !strcmp(argv[2], "off")))
+        {
             bool on = !strcmp(argv[2], "on");
             ota_set_auto_check(on);
-            if (on) ota_set_notified("");      /* tell about the newest release again */
-        } else if (argc != 2) {
+            if (on)
+                ota_set_notified("");      /* tell about the newest release again */
+        }
+        else if (argc != 2)
+        {
             printf("usage: ota notify [on|off]\n");
             return 2;
         }
         printf("Daily check for official updates: %s\n", ota_auto_check() ? "on" : "off");
         return 0;
     }
-    if (!strcmp(op, "cancel")) {
+    if (!strcmp(op, "cancel"))
+    {
         ota_cancel();
         printf("Cancelling...\n");
         return 0;
     }
-    if (!strcmp(op, "restart")) {
+    if (!strcmp(op, "restart"))
+    {
         ota_restart();
         return 0;
     }
-    if (!strcmp(op, "rollback")) {
+    if (!strcmp(op, "rollback"))
+    {
         td_ota_info_t i;
         ota_info(&i);
-        if (!i.on_trial && !i.can_roll_back) {
+        if (!i.on_trial && !i.can_roll_back)
+        {
             printf("ota: there is no previous version to go back to\n");
             return 1;
         }
@@ -707,8 +817,14 @@ static int cmd_ota(tdsh_session_t *session, int argc, char **argv)
 }
 
 static const tdsh_command_t s_cmd = {
-    "ota", "ota <status|official|notify|check|install|cancel|restart|rollback> ...", "Firmware update (OTA)", cmd_ota,
+    "ota",
+    "ota <status|official|notify|check|install|cancel|restart|rollback> ...",
+    "Firmware update (OTA)",
+    cmd_ota,
     TDSH_CMD_ROOT_ONLY,
 };
 
-int ota_esp_register_command(void) { return tdsh_register_command(&s_cmd); }
+int ota_esp_register_command(void)
+{
+    return tdsh_register_command(&s_cmd);
+}

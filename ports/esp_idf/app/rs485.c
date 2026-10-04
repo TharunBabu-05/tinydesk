@@ -28,9 +28,10 @@
 #include "tdsh_board.h"
 
 #define RX_BUF 256          /* a Modbus frame is at most 256 bytes */
-#define LINES 2
+#define LINES  2
 
-typedef struct {
+typedef struct
+{
     int uart, tx, rx, de;
     char name[80];
 } channel_t;
@@ -39,7 +40,10 @@ static channel_t s_ch[LINES];
 static int s_lines;         /* configured lines, 1..LINES; 0: none */
 static int s_open = -1;     /* line in use (1 or 2), -1: none */
 
-static bool line_ok(int port) { return port >= 1 && port <= LINES && s_ch[port - 1].uart >= 0; }
+static bool line_ok(int port)
+{
+    return port >= 1 && port <= LINES && s_ch[port - 1].uart >= 0;
+}
 
 /* A closed line listens: its DE pin is driven low. */
 static void hold_de_low(const channel_t *c)
@@ -51,7 +55,8 @@ static void hold_de_low(const channel_t *c)
 
 static void rs485_close(void)
 {
-    if (s_open >= 1) {
+    if (s_open >= 1)
+    {
         const channel_t *c = &s_ch[s_open - 1];
         uart_driver_delete(c->uart);
         gpio_reset_pin(c->tx);
@@ -63,7 +68,8 @@ static void rs485_close(void)
 
 static bool rs485_open(int port, uint32_t baud, char parity, int stop_bits, char *err, size_t cap)
 {
-    if (!line_ok(port)) {
+    if (!line_ok(port))
+    {
         snprintf(err, cap, "RS-485 line %d is not configured (board keys rs485.%d.*)", port, port);
         return false;
     }
@@ -72,16 +78,21 @@ static bool rs485_open(int port, uint32_t baud, char parity, int stop_bits, char
     uart_config_t cfg = {
         .baud_rate = (int)baud,
         .data_bits = UART_DATA_8_BITS,
-        .parity = parity == 'E' ? UART_PARITY_EVEN : parity == 'O' ? UART_PARITY_ODD : UART_PARITY_DISABLE,
+        .parity = parity == 'E' ? UART_PARITY_EVEN : parity == 'O' ? UART_PARITY_ODD
+                                                                   : UART_PARITY_DISABLE,
         .stop_bits = stop_bits == 2 ? UART_STOP_BITS_2 : UART_STOP_BITS_1,
         .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
         .source_clk = UART_SCLK_DEFAULT,
     };
     esp_err_t e = uart_driver_install(c->uart, RX_BUF, 0, 0, NULL, 0);
-    if (e == ESP_OK) e = uart_param_config(c->uart, &cfg);
-    if (e == ESP_OK) e = uart_set_pin(c->uart, c->tx, c->rx, c->de, UART_PIN_NO_CHANGE);
-    if (e == ESP_OK) e = uart_set_mode(c->uart, UART_MODE_RS485_HALF_DUPLEX);
-    if (e != ESP_OK) {
+    if (e == ESP_OK)
+        e = uart_param_config(c->uart, &cfg);
+    if (e == ESP_OK)
+        e = uart_set_pin(c->uart, c->tx, c->rx, c->de, UART_PIN_NO_CHANGE);
+    if (e == ESP_OK)
+        e = uart_set_mode(c->uart, UART_MODE_RS485_HALF_DUPLEX);
+    if (e != ESP_OK)
+    {
         uart_driver_delete(c->uart);
         hold_de_low(c);
         snprintf(err, cap, "%s: %s (in use by hwtest?)", c->name, esp_err_to_name(e));
@@ -93,23 +104,30 @@ static bool rs485_open(int port, uint32_t baud, char parity, int stop_bits, char
 
 static int rs485_write(const uint8_t *buf, int len)
 {
-    if (s_open < 1) return -1;
+    if (s_open < 1)
+        return -1;
     int n = uart_write_bytes(s_ch[s_open - 1].uart, buf, (size_t)len);
     return n < 0 ? -1 : n;
 }
 
 static int rs485_read(uint8_t *buf, int cap)
 {
-    if (s_open < 1) return -1;
+    if (s_open < 1)
+        return -1;
     uart_port_t u = s_ch[s_open - 1].uart;
     size_t avail = 0;
-    if (uart_get_buffered_data_len(u, &avail) != ESP_OK || avail == 0) return 0;
-    if (avail > (size_t)cap) avail = (size_t)cap;
+    if (uart_get_buffered_data_len(u, &avail) != ESP_OK || avail == 0)
+        return 0;
+    if (avail > (size_t)cap)
+        avail = (size_t)cap;
     int n = uart_read_bytes(u, buf, (uint32_t)avail, 0);
     return n < 0 ? -1 : n;
 }
 
-static const char *rs485_name(int port) { return line_ok(port) ? s_ch[port - 1].name : "not configured"; }
+static const char *rs485_name(int port)
+{
+    return line_ok(port) ? s_ch[port - 1].name : "not configured";
+}
 
 static td_mb_serial_t s_serial = {
     .ports = 0,
@@ -123,9 +141,11 @@ static td_mb_serial_t s_serial = {
 const td_mb_serial_t *rs485_serial(void)
 {
     static bool loaded;
-    if (!loaded) {
+    if (!loaded)
+    {
         loaded = true;
-        for (int i = 0; i < LINES; i++) {
+        for (int i = 0; i < LINES; i++)
+        {
             char key[24];
             channel_t *c = &s_ch[i];
             snprintf(key, sizeof(key), "rs485.%d.uart", i + 1);
@@ -136,7 +156,8 @@ const td_mb_serial_t *rs485_serial(void)
             c->rx = tdsh_board_int(key, -1);
             snprintf(key, sizeof(key), "rs485.%d.de", i + 1);
             c->de = tdsh_board_int(key, -1);
-            if (c->uart < 0 || c->uart >= UART_NUM_MAX || c->tx < 0 || c->rx < 0 || c->de < 0) {
+            if (c->uart < 0 || c->uart >= UART_NUM_MAX || c->tx < 0 || c->rx < 0 || c->de < 0)
+            {
                 c->uart = -1;
                 continue;
             }

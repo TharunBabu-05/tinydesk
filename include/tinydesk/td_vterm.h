@@ -19,7 +19,8 @@
 #include "td_screen.h"
 
 /* 4-byte cell: bold and reverse are folded into the colours. */
-typedef struct {
+typedef struct
+{
     uint16_t ch;
     uint8_t fg, bg;
 } td_vcell_t;
@@ -28,7 +29,8 @@ typedef struct {
  * to ESC [ 6 n and friends). */
 typedef void (*td_vterm_reply_fn)(void *user, const char *data, int len);
 
-typedef struct {
+typedef struct
+{
     int cols, rows;
     td_vcell_t cells[TD_VT_MAX_ROWS * TD_VT_MAX_COLS];   /* stride TD_VT_MAX_COLS */
     td_vcell_t sb[TD_VT_SCROLLBACK * TD_VT_MAX_COLS];    /* scrollback ring */

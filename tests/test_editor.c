@@ -9,11 +9,28 @@
 #define PATH "/fs/a.txt"
 
 static uint32_t s_now = 10000;
-static int fake_read(void *ctx) { (void)ctx; return -1; }
-static int fake_write(void *ctx, const uint8_t *b, int n) { (void)ctx; (void)b; return n; }
-static uint32_t fake_millis(void *ctx) { (void)ctx; return s_now; }
-static void fake_sleep(void *ctx, uint32_t ms) { (void)ctx; s_now += ms; }
-static const td_hal_t s_hal = { fake_read, fake_write, fake_millis, fake_sleep, NULL };
+static int fake_read(void *ctx)
+{
+    (void)ctx;
+    return -1;
+}
+static int fake_write(void *ctx, const uint8_t *b, int n)
+{
+    (void)ctx;
+    (void)b;
+    return n;
+}
+static uint32_t fake_millis(void *ctx)
+{
+    (void)ctx;
+    return s_now;
+}
+static void fake_sleep(void *ctx, uint32_t ms)
+{
+    (void)ctx;
+    s_now += ms;
+}
+static const td_hal_t s_hal = {fake_read, fake_write, fake_millis, fake_sleep, NULL};
 
 /* ------------------------------------------------- one file in memory */
 
@@ -32,21 +49,27 @@ static int fs_read(const char *path, char *buf, int cap)
 static int fs_write(const char *path, const char *data, int len)
 {
     (void)path;
-    if (len > (int)sizeof(s_file)) return -1;
+    if (len > (int)sizeof(s_file))
+        return -1;
     memcpy(s_file, data, (size_t)len);
     s_file_len = len;
     s_writes++;
     return 0;
 }
 
-static int fs_exists(const char *path) { (void)path; return 1; }
+static int fs_exists(const char *path)
+{
+    (void)path;
+    return 1;
+}
 
-static const td_fs_ops_t s_fs = { .root = "/fs", .read = fs_read, .write = fs_write, .exists = fs_exists };
-static const td_sysinfo_t s_info = { .fs = &s_fs };
+static const td_fs_ops_t s_fs = {.root = "/fs", .read = fs_read, .write = fs_write, .exists = fs_exists};
+static const td_sysinfo_t s_info = {.fs = &s_fs};
 
 static bool file_is(const char *expect)
 {
-    if (s_file_len == (int)strlen(expect) && memcmp(s_file, expect, (size_t)s_file_len) == 0) return true;
+    if (s_file_len == (int)strlen(expect) && memcmp(s_file, expect, (size_t)s_file_len) == 0)
+        return true;
     printf("  file: \"%.*s\", expected \"%s\"\n", s_file_len, s_file, expect);
     return false;
 }
@@ -55,7 +78,7 @@ static bool file_is(const char *expect)
 
 static void key(uint32_t k, uint8_t mods)
 {
-    td_event_t ev = { 0 };
+    td_event_t ev = {0};
     ev.type = TD_EV_KEY;
     ev.key = k;
     ev.mods = mods;
@@ -63,11 +86,15 @@ static void key(uint32_t k, uint8_t mods)
     td_wm_dispatch(&ev);
 }
 
-static void ctrl(char c) { key((uint32_t)c, TD_MOD_CTRL); }
+static void ctrl(char c)
+{
+    key((uint32_t)c, TD_MOD_CTRL);
+}
 
 static void type(const char *s)
 {
-    while (*s) key((uint8_t)*s++, 0);
+    while (*s)
+        key((uint8_t)*s++, 0);
 }
 
 /* A bracketed paste, as a terminal sends it, through the input parser. */
@@ -75,13 +102,16 @@ static void paste(const char *text)
 {
     static td_input_t in;
     td_input_init(&in);
-    const char *parts[3] = { "\x1b[200~", text, "\x1b[201~" };
+    const char *parts[3] = {"\x1b[200~", text, "\x1b[201~"};
     for (int i = 0; i < 3; i++)
-        for (const char *p = parts[i]; *p; p++) td_input_feed(&in, (uint8_t)*p, s_now);
+        for (const char *p = parts[i]; *p; p++)
+            td_input_feed(&in, (uint8_t)*p, s_now);
     td_event_t ev;
-    while (td_event_pop(&ev)) {
+    while (td_event_pop(&ev))
+    {
         td_wm_dispatch(&ev);
-        if (ev.type == TD_EV_PASTE) td_input_paste_done(&in);
+        if (ev.type == TD_EV_PASTE)
+            td_input_paste_done(&in);
     }
 }
 
@@ -109,11 +139,13 @@ static const char *row_text(int row)
     td_wm_compose(&s_back);
     td_rect_t c = td_win_client(s_ed);
     int n = 0;
-    for (int x = 0; x < c.w && n < (int)sizeof(out) - 1; x++) {
+    for (int x = 0; x < c.w && n < (int)sizeof(out) - 1; x++)
+    {
         uint32_t ch = td_buffer_cell(&s_back, c.x + x, c.y + row)->ch;
         out[n++] = ch < 0x80 ? (char)ch : '?';
     }
-    while (n > 0 && out[n - 1] == ' ') n--;
+    while (n > 0 && out[n - 1] == ' ')
+        n--;
     out[n] = '\0';
     return out;
 }
@@ -121,23 +153,31 @@ static const char *row_text(int row)
 static bool shows(int row, const char *expect)
 {
     const char *got = row_text(row);
-    if (strcmp(got, expect) == 0) return true;
+    if (strcmp(got, expect) == 0)
+        return true;
     printf("  row %d: \"%s\", expected \"%s\"\n", row, got, expect);
     return false;
 }
 
 /* The status bar is the last row. */
-static bool status_contains(const char *text) { return strstr(row_text(td_win_client(s_ed).h - 1), text) != NULL; }
+static bool status_contains(const char *text)
+{
+    return strstr(row_text(td_win_client(s_ed).h - 1), text) != NULL;
+}
 
 static bool status_has(const char *text)
 {
-    if (status_contains(text)) return true;
+    if (status_contains(text))
+        return true;
     printf("  status: \"%s\", expected \"%s\" in it\n", row_text(td_win_client(s_ed).h - 1), text);
     return false;
 }
 
 /* Unsaved changes show as a '*' before the title. */
-static bool changed(void) { return s_ed->title[0] == '*'; }
+static bool changed(void)
+{
+    return s_ed->title[0] == '*';
+}
 
 /* -------------------------------------------------------------- tests */
 
@@ -233,10 +273,12 @@ static void test_delete_runs(void)
     key(TD_KEY_END, 0);
 
     /* A run of Backspace is one step, and so is a run of Delete. */
-    for (int i = 0; i < 3; i++) key(TD_KEY_BACKSPACE, 0);
+    for (int i = 0; i < 3; i++)
+        key(TD_KEY_BACKSPACE, 0);
     CHECK(shows(0, "abc"));
     key(TD_KEY_HOME, 0);
-    for (int i = 0; i < 2; i++) key(TD_KEY_DELETE, 0);
+    for (int i = 0; i < 2; i++)
+        key(TD_KEY_DELETE, 0);
     CHECK(shows(0, "c"));
     ctrl('z');
     CHECK(shows(0, "abc"));
@@ -260,7 +302,8 @@ static void test_typing_over_a_selection(void)
 
     /* Shift+arrows select too. */
     open_file("abcdef");
-    for (int i = 0; i < 3; i++) key(TD_KEY_RIGHT, TD_MOD_SHIFT);
+    for (int i = 0; i < 3; i++)
+        key(TD_KEY_RIGHT, TD_MOD_SHIFT);
     type("X");
     CHECK(shows(0, "Xdef"));
     ctrl('z');
@@ -322,18 +365,24 @@ static void test_history_limits(void)
     /* The oldest steps are dropped when the history is full; what is left
      * still undoes and redoes to the right text. Words differ, so text
      * restored from the wrong place in the history would show. */
-    enum { WORDS = 200 };
+    enum
+    {
+        WORDS = 200
+    };
     static char full[WORDS * 2 + 1];
     open_file("");
-    for (int i = 0; i < WORDS; i++) {
-        char word[3] = { (char)('a' + i % 26), ' ', '\0' };
+    for (int i = 0; i < WORDS; i++)
+    {
+        char word[3] = {(char)('a' + i % 26), ' ', '\0'};
         type(word);
         memcpy(full + i * 2, word, 2);
     }
     int undone = 0;
-    while (undone <= WORDS) {
+    while (undone <= WORDS)
+    {
         ctrl('z');
-        if (status_contains("Nothing to undo")) break;
+        if (status_contains("Nothing to undo"))
+            break;
         undone++;
     }
     int kept = WORDS - undone;
@@ -342,7 +391,8 @@ static void test_history_limits(void)
     char expect[WORDS * 2 + 1];
     snprintf(expect, sizeof(expect), "%.*s", kept * 2, full);
     CHECK(file_is(expect));
-    for (int i = 0; i < undone; i++) ctrl('y');
+    for (int i = 0; i < undone; i++)
+        ctrl('y');
     ctrl('s');
     CHECK(file_is(full));
 

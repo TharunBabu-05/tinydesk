@@ -6,15 +6,32 @@
 #include "tinydesk/td.h"
 
 static uint32_t s_now = 10000;
-static int fake_read(void *ctx) { (void)ctx; return -1; }
-static int fake_write(void *ctx, const uint8_t *b, int n) { (void)ctx; (void)b; return n; }
-static uint32_t fake_millis(void *ctx) { (void)ctx; return s_now; }
-static void fake_sleep(void *ctx, uint32_t ms) { (void)ctx; s_now += ms; }
-static const td_hal_t s_hal = { fake_read, fake_write, fake_millis, fake_sleep, NULL };
+static int fake_read(void *ctx)
+{
+    (void)ctx;
+    return -1;
+}
+static int fake_write(void *ctx, const uint8_t *b, int n)
+{
+    (void)ctx;
+    (void)b;
+    return n;
+}
+static uint32_t fake_millis(void *ctx)
+{
+    (void)ctx;
+    return s_now;
+}
+static void fake_sleep(void *ctx, uint32_t ms)
+{
+    (void)ctx;
+    s_now += ms;
+}
+static const td_hal_t s_hal = {fake_read, fake_write, fake_millis, fake_sleep, NULL};
 
 static void key(uint32_t k, uint8_t mods)
 {
-    td_event_t ev = { 0 };
+    td_event_t ev = {0};
     ev.type = TD_EV_KEY;
     ev.key = k;
     ev.mods = mods;
@@ -24,12 +41,13 @@ static void key(uint32_t k, uint8_t mods)
 
 static void type(const char *s)
 {
-    while (*s) key((uint8_t)*s++, 0);
+    while (*s)
+        key((uint8_t)*s++, 0);
 }
 
 static void mouse(int action, int button, int x, int y)
 {
-    td_event_t ev = { 0 };
+    td_event_t ev = {0};
     ev.type = TD_EV_MOUSE;
     ev.action = (uint8_t)action;
     ev.button = (uint8_t)button;
@@ -48,12 +66,13 @@ static void click(int x, int y)
 
 static void double_click(int x, int y)
 {
-    td_event_t ev = { 0 };
+    td_event_t ev = {0};
     ev.type = TD_EV_MOUSE;
     ev.button = TD_BUTTON_LEFT;
     ev.x = (int16_t)x;
     ev.y = (int16_t)y;
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < 2; i++)
+    {
         ev.time_ms = s_now;
         ev.action = TD_MOUSE_PRESS;
         td_wm_dispatch(&ev);
@@ -69,44 +88,57 @@ static void paste(const char *text)
 {
     static td_input_t in;
     td_input_init(&in);
-    const char *parts[3] = { "\x1b[200~", text, "\x1b[201~" };
+    const char *parts[3] = {"\x1b[200~", text, "\x1b[201~"};
     for (int i = 0; i < 3; i++)
-        for (const char *p = parts[i]; *p; p++) td_input_feed(&in, (uint8_t)*p, s_now);
+        for (const char *p = parts[i]; *p; p++)
+            td_input_feed(&in, (uint8_t)*p, s_now);
     td_event_t ev;
-    while (td_event_pop(&ev)) {
+    while (td_event_pop(&ev))
+    {
         td_wm_dispatch(&ev);
-        if (ev.type == TD_EV_PASTE) td_input_paste_done(&in);
+        if (ev.type == TD_EV_PASTE)
+            td_input_paste_done(&in);
     }
 }
 
 static bool text_is(const td_widget_t *w, const char *expect)
 {
     const char *got = td_widget_text(w);
-    if (strcmp(got, expect) == 0) return true;
+    if (strcmp(got, expect) == 0)
+        return true;
     printf("  text: \"%s\", expected \"%s\"\n", got, expect);
     return false;
 }
 
 static td_buffer_t s_back;
-static const td_cell_t *cell(int x, int y) { return td_buffer_cell(&s_back, x, y); }
+static const td_cell_t *cell(int x, int y)
+{
+    return td_buffer_cell(&s_back, x, y);
+}
 
 /* A fresh desktop with one 40x12 window; its client area starts at (1, 1). */
 static td_window_t *new_window(void)
 {
     td_wm_init(80, 25);
-    td_window_desc_t d = { .title = "W", .rect = td_rect(0, 0, 40, 12), .flags = TD_WIN_DEFAULT };
+    td_window_desc_t d = {.title = "W", .rect = td_rect(0, 0, 40, 12), .flags = TD_WIN_DEFAULT};
     return td_win_create(&d);
 }
 
 static td_widget_t *find_button(td_window_t *w, const char *caption)
 {
     for (td_widget_t *wd = w->widgets; wd; wd = wd->next)
-        if (wd->type == TD_WT_BUTTON && strcmp(td_widget_text(wd), caption) == 0) return wd;
+        if (wd->type == TD_WT_BUTTON && strcmp(td_widget_text(wd), caption) == 0)
+            return wd;
     return NULL;
 }
 
 static int s_activated;
-static void on_activate(td_widget_t *w, void *user) { (void)w; (void)user; s_activated++; }
+static void on_activate(td_widget_t *w, void *user)
+{
+    (void)w;
+    (void)user;
+    s_activated++;
+}
 
 /* ------------------------------------------------------------ text box */
 
@@ -180,7 +212,8 @@ static void test_textbox_own_buffer(void)
     CHECK_EQ(tb->value, 8);
 
     /* Longer than TD_TEXT_MAX, up to the buffer's size. */
-    for (int i = 0; i < 120; i++) type("x");
+    for (int i = 0; i < 120; i++)
+        type("x");
     CHECK_EQ((int)strlen(url), (int)sizeof(url) - 1);
 }
 
@@ -192,7 +225,8 @@ static void test_textbox_paste(void)
     key(TD_KEY_LEFT, 0);
 
     /* Only the first line; a tab becomes a space, control characters go. */
-    paste("ab\tc\x01" "d\r\nsecond line");
+    paste("ab\tc\x01"
+          "d\r\nsecond line");
     CHECK(text_is(tb, "<ab cd>"));
 
     /* Up to the length limit. */
@@ -227,7 +261,8 @@ static void test_list(void)
     CHECK_EQ(td_list_selected(l), 0);
 
     /* The keys move the selection, and the view follows it. */
-    for (int i = 0; i < 3; i++) key(TD_KEY_DOWN, 0);
+    for (int i = 0; i < 3; i++)
+        key(TD_KEY_DOWN, 0);
     CHECK_EQ(td_list_selected(l), 3);
     CHECK_EQ(l->scroll, 0);
     key(TD_KEY_PGDN, 0);
@@ -308,7 +343,12 @@ static void test_scrollbar(void)
 /* ------------------------------------------ checkbox, button, progress */
 
 static int s_toggles;
-static void on_toggle(td_widget_t *w, void *user) { (void)w; (void)user; s_toggles++; }
+static void on_toggle(td_widget_t *w, void *user)
+{
+    (void)w;
+    (void)user;
+    s_toggles++;
+}
 
 static void test_checkbox_button_progress(void)
 {
@@ -396,16 +436,24 @@ static void test_focus(void)
 /* ---------------------------------------------------------- dialogs */
 
 static int s_answer;
-static void on_answer(int button, void *user) { (void)user; s_answer = button; }
+static void on_answer(int button, void *user)
+{
+    (void)user;
+    s_answer = button;
+}
 
 static td_window_t *s_next;
 static void on_answer_open_next(int button, void *user)
 {
     (void)user;
-    if (button == 0) s_next = td_msgbox("Next", "Second question", "OK", NULL, NULL);
+    if (button == 0)
+        s_next = td_msgbox("Next", "Second question", "OK", NULL, NULL);
 }
 
-static td_window_t *ask(void) { return td_msgbox("Q", "Line one\nLine two", "Yes|No|Cancel", on_answer, NULL); }
+static td_window_t *ask(void)
+{
+    return td_msgbox("Q", "Line one\nLine two", "Yes|No|Cancel", on_answer, NULL);
+}
 
 static void test_msgbox(void)
 {
@@ -517,9 +565,10 @@ static void test_pools_keep_room_for_a_message_box(void)
 {
     /* The last window slot is kept for a message box. */
     td_wm_init(80, 25);
-    td_window_desc_t d = { .title = "W", .rect = td_rect(0, 0, 20, 5), .flags = TD_WIN_DEFAULT };
+    td_window_desc_t d = {.title = "W", .rect = td_rect(0, 0, 20, 5), .flags = TD_WIN_DEFAULT};
     int opened = 0;
-    while (opened <= TD_MAX_WINDOWS && td_win_create(&d)) opened++;
+    while (opened <= TD_MAX_WINDOWS && td_win_create(&d))
+        opened++;
     CHECK_EQ(opened, TD_MAX_WINDOWS - 1);
     CHECK(td_msgbox("Full", "Too many windows", "OK", NULL, NULL) != NULL);
 
@@ -527,7 +576,8 @@ static void test_pools_keep_room_for_a_message_box(void)
      * marked incomplete, and a message box still gets its widgets. */
     td_window_t *w = new_window();
     int made = 0;
-    while (made <= TD_MAX_WIDGETS && td_label(w, 0, 0, 5, "x")) made++;
+    while (made <= TD_MAX_WIDGETS && td_label(w, 0, 0, 5, "x"))
+        made++;
     CHECK(w->incomplete);
     CHECK(made > 0 && made < TD_MAX_WIDGETS);
     td_window_t *m = td_msgbox("Full", "No widgets left", "OK", NULL, NULL);

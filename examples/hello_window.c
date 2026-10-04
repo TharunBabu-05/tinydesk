@@ -17,7 +17,8 @@ static void on_quit(td_widget_t *w, void *user)
 int main(void)
 {
     const td_hal_t *hal = td_host_hal_open();
-    if (!hal) return 1;
+    if (!hal)
+        return 1;
     td_init(hal);
 
     td_window_desc_t desc = {

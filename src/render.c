@@ -26,9 +26,11 @@ void td_render_reset_state(td_renderer_t *r)
 bool td_render_flush(td_renderer_t *r)
 {
     int off = 0;
-    while (off < r->out_len && !r->write_failed) {
+    while (off < r->out_len && !r->write_failed)
+    {
         int n = r->hal->write(r->hal->ctx, r->out + off, r->out_len - off);
-        if (n <= 0) {
+        if (n <= 0)
+        {
             /* The link is not draining (no terminal attached?): drop the rest
              * of this frame instead of stalling the UI. */
             r->write_failed = true;
@@ -45,8 +47,10 @@ bool td_render_flush(td_renderer_t *r)
 static void out_bytes(td_renderer_t *r, const void *data, int len)
 {
     const uint8_t *p = data;
-    while (len > 0) {
-        if (r->out_len == TD_OUT_BUF_SIZE) td_render_flush(r);
+    while (len > 0)
+    {
+        if (r->out_len == TD_OUT_BUF_SIZE)
+            td_render_flush(r);
         int room = TD_OUT_BUF_SIZE - r->out_len;
         int n = len < room ? len : room;
         memcpy(r->out + r->out_len, p, (size_t)n);
@@ -64,7 +68,8 @@ void td_render_raw(td_renderer_t *r, const char *s)
 /* Move the terminal cursor, unless it is already there. */
 static void move_to(td_renderer_t *r, int x, int y)
 {
-    if (r->cur_x == x && r->cur_y == y) return;
+    if (r->cur_x == x && r->cur_y == y)
+        return;
     char seq[16];
     int n = snprintf(seq, sizeof(seq), "\x1b[%d;%dH", y + 1, x + 1);
     out_bytes(r, seq, n);
@@ -77,8 +82,10 @@ static void move_to(td_renderer_t *r, int x, int y)
 static int colour_param(char *p, int value, bool background)
 {
     int base = background ? 40 : 30;
-    if (value < 8) return sprintf(p, ";%d", base + value);
-    if (value < 16) return sprintf(p, ";%d", base + 60 + value - 8);
+    if (value < 8)
+        return sprintf(p, ";%d", base + value);
+    if (value < 16)
+        return sprintf(p, ";%d", base + 60 + value - 8);
     return sprintf(p, ";%d;5;%d", background ? 48 : 38, value);
 }
 
@@ -89,21 +96,29 @@ static void set_style(td_renderer_t *r, const td_cell_t *c)
     bool attr_changed = r->cur_attr != c->attr;
     bool fg_changed = attr_changed || r->cur_fg != c->fg;
     bool bg_changed = attr_changed || r->cur_bg != c->bg;
-    if (!fg_changed && !bg_changed) return;
+    if (!fg_changed && !bg_changed)
+        return;
 
     char seq[48];
     char *p = seq;
     p += sprintf(p, "\x1b[");
-    if (attr_changed) {
+    if (attr_changed)
+    {
         p += sprintf(p, "0");
-        if (c->attr & TD_BOLD) p += sprintf(p, ";1");
-        if (c->attr & TD_UNDERLINE) p += sprintf(p, ";4");
-        if (c->attr & TD_REVERSE) p += sprintf(p, ";7");
+        if (c->attr & TD_BOLD)
+            p += sprintf(p, ";1");
+        if (c->attr & TD_UNDERLINE)
+            p += sprintf(p, ";4");
+        if (c->attr & TD_REVERSE)
+            p += sprintf(p, ";7");
     }
-    if (fg_changed) p += colour_param(p, c->fg, false);
-    if (bg_changed) p += colour_param(p, c->bg, true);
+    if (fg_changed)
+        p += colour_param(p, c->fg, false);
+    if (bg_changed)
+        p += colour_param(p, c->bg, true);
     /* Remove the leading ';' when no reset was emitted. */
-    if (!attr_changed) {
+    if (!attr_changed)
+    {
         memmove(seq + 2, seq + 3, (size_t)(p - seq - 3));
         p--;
     }
@@ -117,15 +132,19 @@ static void set_style(td_renderer_t *r, const td_cell_t *c)
 
 static void put_char(td_renderer_t *r, uint32_t ch, int x, int cols)
 {
-    if (ch < 0x20u || ch == 0x7Fu) ch = ' ';
-    if (td_get_ascii_mode()) ch = td_ascii_fallback(ch);
+    if (ch < 0x20u || ch == 0x7Fu)
+        ch = ' ';
+    if (td_get_ascii_mode())
+        ch = td_ascii_fallback(ch);
     uint8_t utf8[4];
     out_bytes(r, utf8, td_utf8_encode(ch, utf8));
 
     /* With auto-wrap off the cursor sticks at the last column; forget the
      * position there rather than guess what the terminal did. */
-    if (x + 1 >= cols) r->cur_x = -1;
-    else r->cur_x++;
+    if (x + 1 >= cols)
+        r->cur_x = -1;
+    else
+        r->cur_x++;
 }
 
 bool td_render_diff(td_renderer_t *r, td_buffer_t *front, const td_buffer_t *back)
@@ -134,17 +153,21 @@ bool td_render_diff(td_renderer_t *r, td_buffer_t *front, const td_buffer_t *bac
     int rows = back->rows;
     r->write_failed = false;
 
-    if (front->cols != cols || front->rows != rows) {
+    if (front->cols != cols || front->rows != rows)
+    {
         front->cols = cols;
         front->rows = rows;
         td_buffer_invalidate(front);
     }
 
-    for (int y = 0; y < rows && !r->write_failed; y++) {
+    for (int y = 0; y < rows && !r->write_failed; y++)
+    {
         const td_cell_t *b = &back->cells[y * cols];
         td_cell_t *f = &front->cells[y * cols];
-        for (int x = 0; x < cols; x++) {
-            if (memcmp(&b[x], &f[x], sizeof(td_cell_t)) == 0) continue;
+        for (int x = 0; x < cols; x++)
+        {
+            if (memcmp(&b[x], &f[x], sizeof(td_cell_t)) == 0)
+                continue;
             move_to(r, x, y);
             set_style(r, &b[x]);
             put_char(r, b[x].ch, x, cols);
@@ -184,5 +207,7 @@ void td_render_query_size(td_renderer_t *r)
 {
     /* Save cursor, jump far past the corner (the terminal clamps), ask where
      * the cursor ended up, restore. The reply is ESC [ rows ; cols R. */
-    td_render_raw(r, "\x1b" "7\x1b[999;999H\x1b[6n\x1b" "8");
+    td_render_raw(r, "\x1b"
+                     "7\x1b[999;999H\x1b[6n\x1b"
+                     "8");
 }

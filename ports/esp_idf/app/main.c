@@ -49,7 +49,7 @@
 #else
 #define UI_TASK_STACK 5120   /* measured on the C6: about 1.8 KB used */
 #endif
-#define TZ_NAME "/.tdsh_tz"   /* TinyDesk Shell's per-user `tz` setting, in the home */
+#define TZ_NAME          "/.tdsh_tz"   /* TinyDesk Shell's per-user `tz` setting, in the home */
 #define UI_TASK_PRIORITY 5
 
 static const char *TAG = "tinydesk";
@@ -58,12 +58,30 @@ static const char *TAG = "tinydesk";
 
 /* Internal RAM; PSRAM (classic ESP32 port) is reported on its own. */
 #define INTERNAL (MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT)
-static uint32_t free_heap(void) { return (uint32_t)heap_caps_get_free_size(INTERNAL); }
-static uint32_t min_free_heap(void) { return (uint32_t)heap_caps_get_minimum_free_size(INTERNAL); }
-static uint32_t total_heap(void) { return (uint32_t)heap_caps_get_total_size(INTERNAL); }
-static uint32_t psram_free(void) { return (uint32_t)heap_caps_get_free_size(MALLOC_CAP_SPIRAM); }
-static uint32_t psram_total(void) { return (uint32_t)heap_caps_get_total_size(MALLOC_CAP_SPIRAM); }
-static int task_count(void) { return (int)uxTaskGetNumberOfTasks(); }
+static uint32_t free_heap(void)
+{
+    return (uint32_t)heap_caps_get_free_size(INTERNAL);
+}
+static uint32_t min_free_heap(void)
+{
+    return (uint32_t)heap_caps_get_minimum_free_size(INTERNAL);
+}
+static uint32_t total_heap(void)
+{
+    return (uint32_t)heap_caps_get_total_size(INTERNAL);
+}
+static uint32_t psram_free(void)
+{
+    return (uint32_t)heap_caps_get_free_size(MALLOC_CAP_SPIRAM);
+}
+static uint32_t psram_total(void)
+{
+    return (uint32_t)heap_caps_get_total_size(MALLOC_CAP_SPIRAM);
+}
+static int task_count(void)
+{
+    return (int)uxTaskGetNumberOfTasks();
+}
 
 /* The board configuration built into the firmware (the port's board.conf,
  * or board.example.conf; see main/CMakeLists.txt). */
@@ -74,7 +92,8 @@ extern const char s_board_builtin[] asm("_binary_board_builtin_conf_start");
  * buffers are allocated on the first call (when the Task Manager opens) and
  * kept, growing only when there are more tasks: a refresh then needs no
  * memory, so the list does not go blank when RAM is short. */
-typedef struct {
+typedef struct
+{
     TaskHandle_t handle;
     configRUN_TIME_COUNTER_TYPE run;
 } task_sample_t;
@@ -86,15 +105,19 @@ static configRUN_TIME_COUNTER_TYPE s_prev_total;
 
 static bool grow_task_buffers(UBaseType_t cap)
 {
-    if (cap <= s_task_cap) return true;
+    if (cap <= s_task_cap)
+        return true;
     TaskStatus_t *st = realloc(s_status, cap * sizeof(*st));
-    if (!st) return false;
+    if (!st)
+        return false;
     s_status = st;
     task_sample_t *prev = realloc(s_prev, cap * sizeof(*prev));
-    if (!prev) return false;
+    if (!prev)
+        return false;
     s_prev = prev;
     task_sample_t *now = realloc(s_now, cap * sizeof(*now));
-    if (!now) return false;
+    if (!now)
+        return false;
     s_now = now;
     s_task_cap = cap;
     return true;
@@ -102,7 +125,8 @@ static bool grow_task_buffers(UBaseType_t cap)
 
 static int list_tasks(td_task_info_t *out, int max)
 {
-    if (!grow_task_buffers(uxTaskGetNumberOfTasks() + 4)) return -1;
+    if (!grow_task_buffers(uxTaskGetNumberOfTasks() + 4))
+        return -1;
     TaskStatus_t *st = s_status;
     task_sample_t *now = s_now;
     configRUN_TIME_COUNTER_TYPE total = 0;
@@ -110,26 +134,41 @@ static int list_tasks(td_task_info_t *out, int max)
     configRUN_TIME_COUNTER_TYPE elapsed = total - s_prev_total;   /* wraps fine */
     bool have_prev = s_prev_count > 0 && elapsed > 0;
     int k = 0;
-    for (UBaseType_t i = 0; i < n; i++) {
+    for (UBaseType_t i = 0; i < n; i++)
+    {
         now[i].handle = st[i].xHandle;
         now[i].run = st[i].ulRunTimeCounter;
-        if (k >= max) continue;
+        if (k >= max)
+            continue;
         td_task_info_t *t = &out[k++];
         snprintf(t->name, sizeof(t->name), "%s", st[i].pcTaskName);
-        switch (st[i].eCurrentState) {
-        case eRunning: t->state = 'R'; break;
-        case eReady: t->state = 'r'; break;
-        case eBlocked: t->state = 'B'; break;
-        case eSuspended: t->state = 'S'; break;
-        default: t->state = 'D'; break;
+        switch (st[i].eCurrentState)
+        {
+        case eRunning:
+            t->state = 'R';
+            break;
+        case eReady:
+            t->state = 'r';
+            break;
+        case eBlocked:
+            t->state = 'B';
+            break;
+        case eSuspended:
+            t->state = 'S';
+            break;
+        default:
+            t->state = 'D';
+            break;
         }
         t->priority = (uint8_t)st[i].uxCurrentPriority;
         BaseType_t core = xTaskGetCoreID(st[i].xHandle);
         t->core = (int8_t)(core == tskNO_AFFINITY || core < 0 ? -1 : core);
         t->stack_free = (uint32_t)st[i].usStackHighWaterMark;    /* bytes on ESP-IDF */
         t->cpu_tenths = -1;
-        for (int j = 0; have_prev && j < s_prev_count; j++) {
-            if (s_prev[j].handle != st[i].xHandle) continue;
+        for (int j = 0; have_prev && j < s_prev_count; j++)
+        {
+            if (s_prev[j].handle != st[i].xHandle)
+                continue;
             uint64_t ran = (uint64_t)(configRUN_TIME_COUNTER_TYPE)(st[i].ulRunTimeCounter - s_prev[j].run);
             uint64_t tenths = ran * 1000u / ((uint64_t)elapsed * portNUM_PROCESSORS);
             t->cpu_tenths = (int16_t)(tenths > 1000 ? 1000 : tenths);
@@ -143,7 +182,10 @@ static int list_tasks(td_task_info_t *out, int max)
     return k;
 }
 #endif
-static int cpu_mhz(void) { return CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ; }
+static int cpu_mhz(void)
+{
+    return CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ;
+}
 
 /* Time zone: the same offset file TinyDesk Shell's `tz` command uses, so the
  * taskbar clock and `date` agree. Re-read now and then (tz may change it). */
@@ -161,14 +203,17 @@ static bool get_tz(long *seconds)
 {
     int64_t now = esp_timer_get_time();
     bool other_user = strcmp(s_tz_user, td_session_user()) != 0;
-    if (s_tz_read_us < 0 || other_user || now - s_tz_read_us > 30000000) {
+    if (s_tz_read_us < 0 || other_user || now - s_tz_read_us > 30000000)
+    {
         char path[160];
         tz_path(path, sizeof(path));
         snprintf(s_tz_user, sizeof(s_tz_user), "%s", td_session_user());
         s_tz = 0;
         FILE *f = fopen(path, "r");
-        if (f) {
-            if (fscanf(f, "%ld", &s_tz) != 1) s_tz = 0;
+        if (f)
+        {
+            if (fscanf(f, "%ld", &s_tz) != 1)
+                s_tz = 0;
             fclose(f);
         }
         s_tz_read_us = now;
@@ -182,7 +227,8 @@ static bool set_tz(long seconds)
     char path[160];
     tz_path(path, sizeof(path));
     FILE *f = fopen(path, "w");
-    if (!f) return false;
+    if (!f)
+        return false;
     fprintf(f, "%ld\n", seconds);
     bool ok = fclose(f) == 0;
     s_tz_read_us = -1;
@@ -193,19 +239,26 @@ static bool set_tz(long seconds)
 static bool time_now(int64_t *utc)
 {
     time_t now = time(NULL);
-    if (now < 1700000000) return false;   /* not set yet */
+    if (now < 1700000000)
+        return false;   /* not set yet */
     *utc = (int64_t)now;
     return true;
 }
 
 static bool time_set(int64_t utc)
 {
-    struct timeval tv = { .tv_sec = (time_t)utc, .tv_usec = 0 };
+    struct timeval tv = {.tv_sec = (time_t)utc, .tv_usec = 0};
     return settimeofday(&tv, NULL) == 0;
 }
 
-static bool time_auto_get(void) { return tdsh_time_auto(); }
-static bool time_auto_set(bool on) { return tdsh_time_set_auto(on) == 0; }
+static bool time_auto_get(void)
+{
+    return tdsh_time_auto();
+}
+static bool time_auto_set(bool on)
+{
+    return tdsh_time_set_auto(on) == 0;
+}
 
 /* "Sync now" waits for SNTP for a few seconds, so it runs in a short-lived
  * task. */
@@ -221,9 +274,11 @@ static void sync_task(void *arg)
 
 static bool time_sync(void)
 {
-    if (s_syncing || !tdsh_network_is_online()) return false;
+    if (s_syncing || !tdsh_network_is_online())
+        return false;
     s_syncing = true;
-    if (xTaskCreate(sync_task, "td_sntp", 4096, NULL, 3, NULL) != pdPASS) {
+    if (xTaskCreate(sync_task, "td_sntp", 4096, NULL, 3, NULL) != pdPASS)
+    {
         s_syncing = false;
         return false;
     }
@@ -233,7 +288,8 @@ static bool time_sync(void)
 static bool settings_load(void *data, int len)
 {
     nvs_handle_t h;
-    if (nvs_open("tinydesk", NVS_READONLY, &h) != ESP_OK) return false;
+    if (nvs_open("tinydesk", NVS_READONLY, &h) != ESP_OK)
+        return false;
     size_t size = (size_t)len;
     esp_err_t err = nvs_get_blob(h, "settings", data, &size);
     nvs_close(h);
@@ -243,9 +299,11 @@ static bool settings_load(void *data, int len)
 static bool settings_save(const void *data, int len)
 {
     nvs_handle_t h;
-    if (nvs_open("tinydesk", NVS_READWRITE, &h) != ESP_OK) return false;
+    if (nvs_open("tinydesk", NVS_READWRITE, &h) != ESP_OK)
+        return false;
     esp_err_t err = nvs_set_blob(h, "settings", data, (size_t)len);
-    if (err == ESP_OK) err = nvs_commit(h);
+    if (err == ESP_OK)
+        err = nvs_commit(h);
     nvs_close(h);
     return err == ESP_OK;
 }
@@ -264,7 +322,8 @@ static void fill_sysinfo(void)
 {
     esp_chip_info_t chip;
     esp_chip_info(&chip);
-    const char *model = chip.model == CHIP_ESP32 ? "ESP32" : chip.model == CHIP_ESP32C6 ? "ESP32-C6" : CONFIG_IDF_TARGET;
+    const char *model = chip.model == CHIP_ESP32 ? "ESP32" : chip.model == CHIP_ESP32C6 ? "ESP32-C6"
+                                                                                        : CONFIG_IDF_TARGET;
     snprintf(s_chip, sizeof(s_chip), "%s rev %d.%d, %d core%s", model, chip.revision / 100, chip.revision % 100,
              chip.cores, chip.cores == 1 ? "" : "s");
     snprintf(s_sdk, sizeof(s_sdk), "ESP-IDF %s", esp_get_idf_version());
@@ -291,9 +350,12 @@ static void fill_sysinfo(void)
     s_info.set_tz = set_tz;
     s_info.net = net_esp_ops();
     /* Updates need a second app slot (not on the 4 MB ESP32 layout). */
-    if (esp_ota_get_next_update_partition(NULL)) {
+    if (esp_ota_get_next_update_partition(NULL))
+    {
         s_info.ota = ota_esp_ops();
-    } else {
+    }
+    else
+    {
         s_info.no_ota_text =
             "This board cannot update itself: its flash has one app slot\n"
             "(4 MB layout), and an update needs a second one to download into.\n"
@@ -319,8 +381,16 @@ static void fill_sysinfo(void)
 static vprintf_like_t s_prev_vprintf;
 static portMUX_TYPE s_log_mux = portMUX_INITIALIZER_UNLOCKED;
 
-static void log_lock(void *ctx) { (void)ctx; taskENTER_CRITICAL(&s_log_mux); }
-static void log_unlock(void *ctx) { (void)ctx; taskEXIT_CRITICAL(&s_log_mux); }
+static void log_lock(void *ctx)
+{
+    (void)ctx;
+    taskENTER_CRITICAL(&s_log_mux);
+}
+static void log_unlock(void *ctx)
+{
+    (void)ctx;
+    taskEXIT_CRITICAL(&s_log_mux);
+}
 
 /* Every esp_log line: copy into the Log Viewer ring, then print it as
  * before (to the Terminal window for the shell task; nowhere otherwise). */
@@ -341,7 +411,8 @@ static void ui_task(void *arg)
 {
     (void)arg;
     const td_hal_t *hal = hal_mux_init();
-    if (!hal) {
+    if (!hal)
+    {
         vTaskDelete(NULL);
         return;
     }
@@ -352,10 +423,12 @@ static void ui_task(void *arg)
              (unsigned)uxTaskGetStackHighWaterMark(NULL));
 
     uint32_t last_report = 0;
-    while (td_step()) {
+    while (td_step())
+    {
         hal->sleep_ms(hal->ctx, TD_LOOP_SLEEP_MS);
         uint32_t now = td_millis();
-        if (now - last_report > 60000) {
+        if (now - last_report > 60000)
+        {
             last_report = now;
             ESP_LOGI(TAG, "UI stack min free %u B, heap free %u B (min %u B)",
                      (unsigned)uxTaskGetStackHighWaterMark(NULL), (unsigned)free_heap(),
@@ -383,7 +456,8 @@ void app_main(void)
     quiet_usb_port();
 
     esp_err_t err = nvs_flash_init();
-    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND)
+    {
         ESP_ERROR_CHECK(nvs_flash_erase());
         err = nvs_flash_init();
     }
@@ -396,7 +470,8 @@ void app_main(void)
      * already existing. */
     ESP_ERROR_CHECK(esp_netif_init());
     err = esp_event_loop_create_default();
-    if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) ESP_ERROR_CHECK(err);
+    if (err != ESP_OK && err != ESP_ERR_INVALID_STATE)
+        ESP_ERROR_CHECK(err);
 
     td_log_set_lock(log_lock, log_unlock, NULL);
     s_prev_vprintf = esp_log_set_vprintf(log_hook);
@@ -407,11 +482,14 @@ void app_main(void)
     cfg.board_config = s_board_builtin;   /* board.conf (or the example) built in */
     cfg.default_user = "root";
     err = tdsh_espidf_init(&cfg);
-    if (err != ESP_OK) ESP_LOGE(TAG, "TinyDesk Shell init failed: %s (Terminal will not work)", esp_err_to_name(err));
-    else {
+    if (err != ESP_OK)
+        ESP_LOGE(TAG, "TinyDesk Shell init failed: %s (Terminal will not work)", esp_err_to_name(err));
+    else
+    {
         td_proto_register_shell_commands();   /* mqtt, modbus */
         td_proto_set_break_check(tdsh_bridge_break_requested);   /* Ctrl+C stops modbus read -i */
-        if (esp_ota_get_next_update_partition(NULL)) ota_esp_register_command();   /* ota (root only) */
+        if (esp_ota_get_next_update_partition(NULL))
+            ota_esp_register_command();   /* ota (root only) */
     }
     td_mb_set_serial(board_rtu_lines());        /* Modbus RTU lines, if the board has any */
 
@@ -420,7 +498,8 @@ void app_main(void)
     /* A new firmware runs on trial: confirm it once it has run for 30 s,
      * otherwise a crash or a reset makes the bootloader go back. */
     static esp_timer_handle_t s_ok_timer;
-    const esp_timer_create_args_t ok = { .callback = confirm_firmware, .name = "ota_ok" };
-    if (esp_timer_create(&ok, &s_ok_timer) == ESP_OK) esp_timer_start_once(s_ok_timer, 30 * 1000000LL);
+    const esp_timer_create_args_t ok = {.callback = confirm_firmware, .name = "ota_ok"};
+    if (esp_timer_create(&ok, &s_ok_timer) == ESP_OK)
+        esp_timer_start_once(s_ok_timer, 30 * 1000000LL);
     telnet_start();   /* remote desktop on port 23 (TinyDesk Shell login) */
 }

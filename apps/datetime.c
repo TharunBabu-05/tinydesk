@@ -16,14 +16,31 @@
 /* ------------------------------------------------------ calendar maths */
 
 static const char *const s_months[12] = {
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December",
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
 };
 static const char *const s_weekdays[7] = {
-    "Thursday", "Friday", "Saturday", "Sunday", "Monday", "Tuesday", "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
 };
 
-typedef struct {
+typedef struct
+{
     int year, month, day;     /* month 1..12 */
     int hour, min, sec;
     int weekday;              /* index into s_weekdays (0 = Thursday) */
@@ -68,7 +85,8 @@ static long user_tz(void)
 {
     long tz = 0;
     const td_sysinfo_t *si = td_sysinfo();
-    if (si->get_tz) si->get_tz(&tz);
+    if (si->get_tz)
+        si->get_tz(&tz);
     return tz;
 }
 
@@ -77,7 +95,8 @@ static bool local_now(civil_t *c)
 {
     const td_sysinfo_t *si = td_sysinfo();
     int64_t utc;
-    if (!si->time_now || !si->time_now(&utc)) return false;
+    if (!si->time_now || !si->time_now(&utc))
+        return false;
     civil_from_seconds((long long)utc + user_tz(), c);
     return true;
 }
@@ -85,71 +104,86 @@ static bool local_now(civil_t *c)
 static void format_time(const civil_t *c, bool seconds, char *buf, size_t cap)
 {
     const td_clock_prefs_t *p = td_clock_prefs();
-    if (p->clock_12h) {
+    if (p->clock_12h)
+    {
         int h = c->hour % 12 ? c->hour % 12 : 12;
-        if (seconds) snprintf(buf, cap, "%d:%02d:%02d %s", h, c->min, c->sec, c->hour < 12 ? "AM" : "PM");
-        else snprintf(buf, cap, "%d:%02d %s", h, c->min, c->hour < 12 ? "AM" : "PM");
-    } else if (seconds) {
+        if (seconds)
+            snprintf(buf, cap, "%d:%02d:%02d %s", h, c->min, c->sec, c->hour < 12 ? "AM" : "PM");
+        else
+            snprintf(buf, cap, "%d:%02d %s", h, c->min, c->hour < 12 ? "AM" : "PM");
+    }
+    else if (seconds)
+    {
         snprintf(buf, cap, "%02d:%02d:%02d", c->hour, c->min, c->sec);
-    } else {
+    }
+    else
+    {
         snprintf(buf, cap, "%02d:%02d", c->hour, c->min);
     }
 }
 
-static const char *const s_date_formats[TD_DATE_FORMATS] = { "DD-MM-YYYY", "YYYY-MM-DD", "MM/DD/YYYY" };
+static const char *const s_date_formats[TD_DATE_FORMATS] = {"DD-MM-YYYY", "YYYY-MM-DD", "MM/DD/YYYY"};
 
 static void format_date(const civil_t *c, char *buf, size_t cap)
 {
-    switch (td_clock_prefs()->date_format) {
-    case TD_DATE_YMD: snprintf(buf, cap, "%04d-%02d-%02d", c->year, c->month, c->day); break;
-    case TD_DATE_MDY: snprintf(buf, cap, "%02d/%02d/%04d", c->month, c->day, c->year); break;
-    default: snprintf(buf, cap, "%02d-%02d-%04d", c->day, c->month, c->year); break;
+    switch (td_clock_prefs()->date_format)
+    {
+    case TD_DATE_YMD:
+        snprintf(buf, cap, "%04d-%02d-%02d", c->year, c->month, c->day);
+        break;
+    case TD_DATE_MDY:
+        snprintf(buf, cap, "%02d/%02d/%04d", c->month, c->day, c->year);
+        break;
+    default:
+        snprintf(buf, cap, "%02d-%02d-%04d", c->day, c->month, c->year);
+        break;
     }
 }
 
 /* ---------------------------------------------------------- time zones */
 
-typedef struct {
+typedef struct
+{
     int minutes;              /* east of UTC */
     const char *places;
 } zone_t;
 
 /* Fixed offsets (TinyDesk Shell's tz has no daylight saving). */
 static const zone_t s_zones[] = {
-    { -720, "International Date Line West" },
-    { -660, "Coordinated Universal Time-11" },
-    { -600, "Hawaii" },
-    { -540, "Alaska" },
-    { -480, "Pacific Time (US & Canada)" },
-    { -420, "Mountain Time (US & Canada)" },
-    { -360, "Central Time (US & Canada), Mexico City" },
-    { -300, "Eastern Time (US & Canada), Bogota, Lima" },
-    { -240, "Atlantic Time (Canada), Caracas, La Paz" },
-    { -210, "Newfoundland" },
-    { -180, "Brasilia, Buenos Aires, Montevideo" },
-    { -120, "Coordinated Universal Time-02" },
-    { -60, "Azores, Cabo Verde Is." },
-    { 0, "Coordinated Universal Time, London, Lisbon" },
-    { 60, "Berlin, Paris, Rome, Madrid, Lagos" },
-    { 120, "Athens, Cairo, Helsinki, Johannesburg" },
-    { 180, "Moscow, Istanbul, Riyadh, Nairobi" },
-    { 210, "Tehran" },
-    { 240, "Abu Dhabi, Muscat, Baku, Tbilisi" },
-    { 270, "Kabul" },
-    { 300, "Islamabad, Karachi, Tashkent" },
-    { 330, "Chennai, Kolkata, Mumbai, New Delhi" },
-    { 345, "Kathmandu" },
-    { 360, "Dhaka, Astana" },
-    { 390, "Yangon (Rangoon)" },
-    { 420, "Bangkok, Hanoi, Jakarta" },
-    { 480, "Beijing, Hong Kong, Singapore, Perth" },
-    { 540, "Tokyo, Seoul, Osaka" },
-    { 570, "Adelaide, Darwin" },
-    { 600, "Sydney, Melbourne, Brisbane, Guam" },
-    { 660, "Solomon Is., New Caledonia" },
-    { 720, "Auckland, Wellington, Fiji" },
-    { 780, "Nuku'alofa, Samoa" },
-    { 840, "Kiritimati Island" },
+    {-720, "International Date Line West"},
+    {-660, "Coordinated Universal Time-11"},
+    {-600, "Hawaii"},
+    {-540, "Alaska"},
+    {-480, "Pacific Time (US & Canada)"},
+    {-420, "Mountain Time (US & Canada)"},
+    {-360, "Central Time (US & Canada), Mexico City"},
+    {-300, "Eastern Time (US & Canada), Bogota, Lima"},
+    {-240, "Atlantic Time (Canada), Caracas, La Paz"},
+    {-210, "Newfoundland"},
+    {-180, "Brasilia, Buenos Aires, Montevideo"},
+    {-120, "Coordinated Universal Time-02"},
+    {-60, "Azores, Cabo Verde Is."},
+    {0, "Coordinated Universal Time, London, Lisbon"},
+    {60, "Berlin, Paris, Rome, Madrid, Lagos"},
+    {120, "Athens, Cairo, Helsinki, Johannesburg"},
+    {180, "Moscow, Istanbul, Riyadh, Nairobi"},
+    {210, "Tehran"},
+    {240, "Abu Dhabi, Muscat, Baku, Tbilisi"},
+    {270, "Kabul"},
+    {300, "Islamabad, Karachi, Tashkent"},
+    {330, "Chennai, Kolkata, Mumbai, New Delhi"},
+    {345, "Kathmandu"},
+    {360, "Dhaka, Astana"},
+    {390, "Yangon (Rangoon)"},
+    {420, "Bangkok, Hanoi, Jakarta"},
+    {480, "Beijing, Hong Kong, Singapore, Perth"},
+    {540, "Tokyo, Seoul, Osaka"},
+    {570, "Adelaide, Darwin"},
+    {600, "Sydney, Melbourne, Brisbane, Guam"},
+    {660, "Solomon Is., New Caledonia"},
+    {720, "Auckland, Wellington, Fiji"},
+    {780, "Nuku'alofa, Samoa"},
+    {840, "Kiritimati Island"},
 };
 #define ZONE_COUNT ((int)(sizeof(s_zones) / sizeof(s_zones[0])))
 
@@ -163,7 +197,8 @@ static void format_offset(long secs, char *buf, size_t cap)
 static int zone_index(long secs)
 {
     for (int i = 0; i < ZONE_COUNT; i++)
-        if (s_zones[i].minutes * 60L == secs) return i;
+        if (s_zones[i].minutes * 60L == secs)
+            return i;
     return -1;
 }
 
@@ -181,7 +216,8 @@ static void zone_text(long secs, char *buf, size_t cap)
 void td_time_of_day(int64_t utc, char *buf, int cap)
 {
     buf[0] = '\0';
-    if (utc <= 0) return;
+    if (utc <= 0)
+        return;
     civil_t c;
     civil_from_seconds((long long)utc + user_tz(), &c);
     format_time(&c, true, buf, (size_t)cap);
@@ -191,9 +227,11 @@ void td_time_of_day(int64_t utc, char *buf, int cap)
 
 static bool clock_text(char *buf, int cap)
 {
-    if (td_clock_prefs()->hide_clock) return false;
+    if (td_clock_prefs()->hide_clock)
+        return false;
     civil_t c;
-    if (!local_now(&c)) {
+    if (!local_now(&c))
+    {
         snprintf(buf, (size_t)cap, "--:-- no clock");
         return true;
     }
@@ -207,9 +245,11 @@ static bool clock_text(char *buf, int cap)
 /* The same, apart (small and large taskbars). */
 static bool clock_parts(char *time, int tcap, char *date, int dcap)
 {
-    if (td_clock_prefs()->hide_clock) return false;
+    if (td_clock_prefs()->hide_clock)
+        return false;
     civil_t c;
-    if (!local_now(&c)) {
+    if (!local_now(&c))
+    {
         snprintf(time, (size_t)tcap, "--:--");
         snprintf(date, (size_t)dcap, "no clock");
         return true;
@@ -225,30 +265,50 @@ static void sync_now(void);
 static void clock_menu_chosen(int item, void *user)
 {
     (void)user;
-    switch (item) {
-    case 0: td_datetime_open(); break;
-    case 1: open_zone_picker(); break;
-    case 2: sync_now(); break;
-    case 4: td_app_launch("Settings"); break;
-    default: break;
+    switch (item)
+    {
+    case 0:
+        td_datetime_open();
+        break;
+    case 1:
+        open_zone_picker();
+        break;
+    case 2:
+        sync_now();
+        break;
+    case 4:
+        td_app_launch("Settings");
+        break;
+    default:
+        break;
     }
 }
 
 static void clock_click(int button, int x, int y)
 {
-    if (button == TD_BUTTON_RIGHT) {
+    if (button == TD_BUTTON_RIGHT)
+    {
         static const char *const items[] = {
-            "Adjust date and time", "Change time zone...", "Sync time now", "-", "Settings",
+            "Adjust date and time",
+            "Change time zone...",
+            "Sync time now",
+            "-",
+            "Settings",
         };
         td_menu_popup(x, y, items, 5, clock_menu_chosen, NULL);
-    } else {
+    }
+    else
+    {
         td_datetime_open();
     }
 }
 
-static const td_clock_provider_t s_clock = { clock_text, clock_click, clock_parts };
+static const td_clock_provider_t s_clock = {clock_text, clock_click, clock_parts};
 
-void td_datetime_install_clock(void) { td_wm_set_clock(&s_clock); }
+void td_datetime_install_clock(void)
+{
+    td_wm_set_clock(&s_clock);
+}
 
 /* ------------------------------------------------------ Date & time */
 
@@ -258,22 +318,23 @@ static td_widget_t *s_zone_info, *s_msg, *s_zone_list;
 
 /* 3x3 block digits for the big clock. */
 static const char *const s_big[11][3] = {
-    { "\xE2\x96\x88\xE2\x96\x80\xE2\x96\x88", "\xE2\x96\x88 \xE2\x96\x88", "\xE2\x96\x80\xE2\x96\x80\xE2\x96\x80" },
-    { "\xE2\x96\x80\xE2\x96\x88 ", " \xE2\x96\x88 ", "\xE2\x96\x80\xE2\x96\x80\xE2\x96\x80" },
-    { "\xE2\x96\x80\xE2\x96\x80\xE2\x96\x88", "\xE2\x96\x88\xE2\x96\x80\xE2\x96\x80", "\xE2\x96\x80\xE2\x96\x80\xE2\x96\x80" },
-    { "\xE2\x96\x80\xE2\x96\x80\xE2\x96\x88", " \xE2\x96\x80\xE2\x96\x88", "\xE2\x96\x80\xE2\x96\x80\xE2\x96\x80" },
-    { "\xE2\x96\x88 \xE2\x96\x88", "\xE2\x96\x80\xE2\x96\x80\xE2\x96\x88", "  \xE2\x96\x80" },
-    { "\xE2\x96\x88\xE2\x96\x80\xE2\x96\x80", "\xE2\x96\x80\xE2\x96\x80\xE2\x96\x88", "\xE2\x96\x80\xE2\x96\x80\xE2\x96\x80" },
-    { "\xE2\x96\x88\xE2\x96\x80\xE2\x96\x80", "\xE2\x96\x88\xE2\x96\x80\xE2\x96\x88", "\xE2\x96\x80\xE2\x96\x80\xE2\x96\x80" },
-    { "\xE2\x96\x80\xE2\x96\x80\xE2\x96\x88", "  \xE2\x96\x88", "  \xE2\x96\x80" },
-    { "\xE2\x96\x88\xE2\x96\x80\xE2\x96\x88", "\xE2\x96\x88\xE2\x96\x80\xE2\x96\x88", "\xE2\x96\x80\xE2\x96\x80\xE2\x96\x80" },
-    { "\xE2\x96\x88\xE2\x96\x80\xE2\x96\x88", "\xE2\x96\x80\xE2\x96\x80\xE2\x96\x88", "\xE2\x96\x80\xE2\x96\x80\xE2\x96\x80" },
-    { "\xE2\x96\x84", "\xE2\x96\x84", " " },   /* ':' */
+    {"\xE2\x96\x88\xE2\x96\x80\xE2\x96\x88", "\xE2\x96\x88 \xE2\x96\x88", "\xE2\x96\x80\xE2\x96\x80\xE2\x96\x80"},
+    {"\xE2\x96\x80\xE2\x96\x88 ", " \xE2\x96\x88 ", "\xE2\x96\x80\xE2\x96\x80\xE2\x96\x80"},
+    {"\xE2\x96\x80\xE2\x96\x80\xE2\x96\x88", "\xE2\x96\x88\xE2\x96\x80\xE2\x96\x80", "\xE2\x96\x80\xE2\x96\x80\xE2\x96\x80"},
+    {"\xE2\x96\x80\xE2\x96\x80\xE2\x96\x88", " \xE2\x96\x80\xE2\x96\x88", "\xE2\x96\x80\xE2\x96\x80\xE2\x96\x80"},
+    {"\xE2\x96\x88 \xE2\x96\x88", "\xE2\x96\x80\xE2\x96\x80\xE2\x96\x88", "  \xE2\x96\x80"},
+    {"\xE2\x96\x88\xE2\x96\x80\xE2\x96\x80", "\xE2\x96\x80\xE2\x96\x80\xE2\x96\x88", "\xE2\x96\x80\xE2\x96\x80\xE2\x96\x80"},
+    {"\xE2\x96\x88\xE2\x96\x80\xE2\x96\x80", "\xE2\x96\x88\xE2\x96\x80\xE2\x96\x88", "\xE2\x96\x80\xE2\x96\x80\xE2\x96\x80"},
+    {"\xE2\x96\x80\xE2\x96\x80\xE2\x96\x88", "  \xE2\x96\x88", "  \xE2\x96\x80"},
+    {"\xE2\x96\x88\xE2\x96\x80\xE2\x96\x88", "\xE2\x96\x88\xE2\x96\x80\xE2\x96\x88", "\xE2\x96\x80\xE2\x96\x80\xE2\x96\x80"},
+    {"\xE2\x96\x88\xE2\x96\x80\xE2\x96\x88", "\xE2\x96\x80\xE2\x96\x80\xE2\x96\x88", "\xE2\x96\x80\xE2\x96\x80\xE2\x96\x80"},
+    {"\xE2\x96\x84", "\xE2\x96\x84", " "},   /* ':' */
 };
 
 static int draw_big(int x, int y, int glyph, uint8_t fg, uint8_t bg)
 {
-    for (int r = 0; r < 3; r++) td_text(x, y + r, s_big[glyph][r], fg, bg, 0);
+    for (int r = 0; r < 3; r++)
+        td_text(x, y + r, s_big[glyph][r], fg, bg, 0);
     return glyph == 10 ? 2 : 4;
 }
 
@@ -284,7 +345,8 @@ static void on_draw(td_window_t *win, int w, int h)
     (void)h;
     const td_theme_t *t = td_theme();
     civil_t c;
-    if (!local_now(&c)) {
+    if (!local_now(&c))
+    {
         td_text(1, 1, "The clock is not set yet.", t->dim, t->win_bg, 0);
         td_text(1, 2, "It is set from the network once Wi-Fi is connected.", t->dim, t->win_bg, 0);
         return;
@@ -292,7 +354,8 @@ static void on_draw(td_window_t *win, int w, int h)
     const td_clock_prefs_t *p = td_clock_prefs();
     int hour = p->clock_12h ? (c.hour % 12 ? c.hour % 12 : 12) : c.hour;
     int x = 1;
-    if (!p->clock_12h || hour >= 10) x += draw_big(x, 0, hour / 10, t->accent, t->win_bg);
+    if (!p->clock_12h || hour >= 10)
+        x += draw_big(x, 0, hour / 10, t->accent, t->win_bg);
     x += draw_big(x, 0, hour % 10, t->accent, t->win_bg);
     x += draw_big(x, 0, 10, t->accent, t->win_bg);
     x += draw_big(x, 0, c.min / 10, t->accent, t->win_bg);
@@ -308,7 +371,8 @@ static void on_draw(td_window_t *win, int w, int h)
 
 static void refresh(void)
 {
-    if (!td_win_is_open(s_win)) return;
+    if (!td_win_is_open(s_win))
+        return;
     const td_sysinfo_t *si = td_sysinfo();
     const td_clock_prefs_t *p = td_clock_prefs();
     char zone[64], off[16];
@@ -317,7 +381,8 @@ static void refresh(void)
     format_offset(tz, off, sizeof(off));
     td_widget_printf(s_zone_info, "%s, the time zone of %.24s", off, td_session_user());
     td_widget_set_text(s_zone_btn, zone);
-    if (s_auto) td_checkbox_set(s_auto, si->time_auto_get && si->time_auto_get());
+    if (s_auto)
+        td_checkbox_set(s_auto, si->time_auto_get && si->time_auto_get());
     td_checkbox_set(s_show, !p->hide_clock);
     td_checkbox_set(s_h24, !p->clock_12h);
     td_checkbox_set(s_h12, p->clock_12h);
@@ -328,7 +393,8 @@ static void refresh(void)
 
 static void say(const char *text)
 {
-    if (td_win_is_open(s_win)) td_widget_set_text(s_msg, text);
+    if (td_win_is_open(s_win))
+        td_widget_set_text(s_msg, text);
 }
 
 static void changed_prefs(void)
@@ -353,7 +419,8 @@ static void picker_apply(void)
 {
     int i = td_list_selected(s_zone_list);
     const td_sysinfo_t *si = td_sysinfo();
-    if (i < 0 || i >= ZONE_COUNT) return;
+    if (i < 0 || i >= ZONE_COUNT)
+        return;
     bool ok = si->set_tz && si->set_tz(s_zones[i].minutes * 60L);
     td_win_close(s_picker);
     say(ok ? "Time zone changed." : "Could not change the time zone.");
@@ -361,18 +428,38 @@ static void picker_apply(void)
     td_wm_invalidate();
 }
 
-static void on_zone_activate(td_widget_t *w, void *user) { (void)w; (void)user; picker_apply(); }
-static void on_zone_ok(td_widget_t *w, void *user) { (void)w; (void)user; picker_apply(); }
-static void on_zone_cancel(td_widget_t *w, void *user) { (void)user; td_win_close(w->win); }
-static void on_picker_close(td_window_t *win) { (void)win; s_picker = NULL; }
+static void on_zone_activate(td_widget_t *w, void *user)
+{
+    (void)w;
+    (void)user;
+    picker_apply();
+}
+static void on_zone_ok(td_widget_t *w, void *user)
+{
+    (void)w;
+    (void)user;
+    picker_apply();
+}
+static void on_zone_cancel(td_widget_t *w, void *user)
+{
+    (void)user;
+    td_win_close(w->win);
+}
+static void on_picker_close(td_window_t *win)
+{
+    (void)win;
+    s_picker = NULL;
+}
 
 static void open_zone_picker(void)
 {
-    if (!td_sysinfo()->set_tz) {
+    if (!td_sysinfo()->set_tz)
+    {
         td_msgbox("Time zone", "The time zone cannot be changed here.", "OK", NULL, NULL);
         return;
     }
-    if (td_win_is_open(s_picker)) {
+    if (td_win_is_open(s_picker))
+    {
         td_win_focus(s_picker);
         return;
     }
@@ -383,7 +470,8 @@ static void open_zone_picker(void)
         .on_close = on_picker_close,
     };
     s_picker = td_win_create(&d);
-    if (!s_picker) return;
+    if (!s_picker)
+        return;
     td_label(s_picker, 1, 0, 0, "Fixed offsets, no daylight saving (like 'tz').");
     s_zone_list = td_list(s_picker, td_rect(0, 1, -1, -2), zone_item, on_zone_activate, NULL);
     td_scrollbar(s_picker, -1, 1, -2, s_zone_list);
@@ -400,25 +488,36 @@ static void open_zone_picker(void)
 static void sync_now(void)
 {
     const td_sysinfo_t *si = td_sysinfo();
-    if (!si->time_sync) {
+    if (!si->time_sync)
+    {
         td_msgbox("Date & time", "This device takes its time from the host.", "OK", NULL, NULL);
         return;
     }
     say(si->time_sync() ? "Synchronising with pool.ntp.org..." : "Cannot sync now (no network?).");
 }
 
-static void on_sync(td_widget_t *w, void *user) { (void)w; (void)user; sync_now(); }
+static void on_sync(td_widget_t *w, void *user)
+{
+    (void)w;
+    (void)user;
+    sync_now();
+}
 
 static void on_auto(td_widget_t *w, void *user)
 {
     (void)user;
     const td_sysinfo_t *si = td_sysinfo();
     bool want = td_checkbox_get(w);
-    if (!td_session_is_root()) {
+    if (!td_session_is_root())
+    {
         say("Only root can change how the device sets its clock.");
-    } else if (!si->time_auto_set || !si->time_auto_set(want)) {
+    }
+    else if (!si->time_auto_set || !si->time_auto_set(want))
+    {
         say("Could not change automatic time.");
-    } else {
+    }
+    else
+    {
         say(want ? "The clock is set from the network." : "Automatic time is off.");
     }
     refresh();
@@ -428,9 +527,12 @@ static bool parse_datetime(const char *s, civil_t *c)
 {
     memset(c, 0, sizeof(*c));
     int n = sscanf(s, "%d-%d-%d %d:%d:%d", &c->year, &c->month, &c->day, &c->hour, &c->min, &c->sec);
-    if (n < 5) return false;
-    if (c->year < 2020 || c->year > 2099 || c->month < 1 || c->month > 12 || c->day < 1 || c->day > 31) return false;
-    if (c->hour < 0 || c->hour > 23 || c->min < 0 || c->min > 59 || c->sec < 0 || c->sec > 59) return false;
+    if (n < 5)
+        return false;
+    if (c->year < 2020 || c->year > 2099 || c->month < 1 || c->month > 12 || c->day < 1 || c->day > 31)
+        return false;
+    if (c->hour < 0 || c->hour > 23 || c->min < 0 || c->min > 59 || c->sec < 0 || c->sec > 59)
+        return false;
     civil_t check;
     long long days = days_from_civil(c->year, c->month, c->day);
     civil_from_days(days, &check.year, &check.month, &check.day);
@@ -441,7 +543,8 @@ static void manual_answer(const char *text, void *user)
 {
     (void)user;
     civil_t c;
-    if (!parse_datetime(text, &c)) {
+    if (!parse_datetime(text, &c))
+    {
         say("Use YYYY-MM-DD HH:MM (24-hour), e.g. 2026-09-24 14:05.");
         return;
     }
@@ -457,15 +560,18 @@ static void on_manual(td_widget_t *w, void *user)
     (void)w;
     (void)user;
     const td_sysinfo_t *si = td_sysinfo();
-    if (!si->time_set) {
+    if (!si->time_set)
+    {
         say("This device takes its time from the host.");
         return;
     }
-    if (!td_session_is_root()) {
+    if (!td_session_is_root())
+    {
         say("Only root can change the system clock.");
         return;
     }
-    if (si->time_auto_get && si->time_auto_get()) {
+    if (si->time_auto_get && si->time_auto_get())
+    {
         say("Turn off 'Set time automatically' first.");
         return;
     }
@@ -501,14 +607,31 @@ static void on_format(td_widget_t *w, void *user)
     changed_prefs();
 }
 
-static void on_zone(td_widget_t *w, void *user) { (void)w; (void)user; open_zone_picker(); }
-static void on_close_btn(td_widget_t *w, void *user) { (void)user; td_win_close(w->win); }
-static void on_close(td_window_t *win) { (void)win; s_win = NULL; }
-static void on_tick(td_window_t *win) { td_win_invalidate(win); }
+static void on_zone(td_widget_t *w, void *user)
+{
+    (void)w;
+    (void)user;
+    open_zone_picker();
+}
+static void on_close_btn(td_widget_t *w, void *user)
+{
+    (void)user;
+    td_win_close(w->win);
+}
+static void on_close(td_window_t *win)
+{
+    (void)win;
+    s_win = NULL;
+}
+static void on_tick(td_window_t *win)
+{
+    td_win_invalidate(win);
+}
 
 void td_datetime_open(void)
 {
-    if (td_win_is_open(s_win)) {
+    if (td_win_is_open(s_win))
+    {
         td_win_focus(s_win);
         return;
     }
@@ -523,17 +646,21 @@ void td_datetime_open(void)
         .tick_ms = 1000,
     };
     s_win = td_win_create(&d);
-    if (!s_win) return;
+    if (!s_win)
+        return;
 
     s_zone_info = td_label(s_win, 1, 4, 64, "");
     td_label(s_win, 1, 6, 0, "Time zone");
     s_zone_btn = td_button(s_win, 12, 6, "", on_zone, NULL);
 
     s_auto = NULL;
-    if (si->time_auto_get) {
+    if (si->time_auto_get)
+    {
         s_auto = td_checkbox(s_win, 1, 8, "Set time automatically", false, on_auto, NULL);
         s_sync_btn = td_button(s_win, 40, 8, "Sync now", on_sync, NULL);
-    } else {
+    }
+    else
+    {
         td_label(s_win, 1, 8, 0, "The time comes from the host computer.");
     }
     td_label(s_win, 1, 9, 0, "Set the date and time manually");
@@ -545,8 +672,7 @@ void td_datetime_open(void)
     s_h12 = td_checkbox(s_win, 30, 12, "12-hour", false, on_hours, (void *)(intptr_t)1);
     td_label(s_win, 1, 13, 0, "Date format");
     s_fmt_btn = td_button(s_win, 16, 13, "DD-MM-YYYY", on_format, NULL);
-    td_label(s_win, 1, 15, 0, td_session_is_root() ? "Clock settings apply to the whole device."
-                                                    : "Only root can set the clock; the rest is yours.");
+    td_label(s_win, 1, 15, 0, td_session_is_root() ? "Clock settings apply to the whole device." : "Only root can set the clock; the rest is yours.");
 
     s_msg = td_label(s_win, 1, -2, 64, "");
     td_button(s_win, 1, -1, "Close", on_close_btn, NULL);
