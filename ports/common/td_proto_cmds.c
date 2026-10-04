@@ -44,7 +44,9 @@ static bool parse_u16(const char *s, uint16_t *out)
     return true;
 }
 
-/* No default: with every state listed, -Wswitch reports a new one. */
+/* No default case: with every state listed, -Wswitch flags any state
+ * added later. The return after the switch only catches out-of-range
+ * values. */
 static const char *state_name(td_mqtt_state_t s)
 {
     switch (s)
