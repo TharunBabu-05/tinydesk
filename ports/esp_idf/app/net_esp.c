@@ -1,5 +1,5 @@
 /*
- * net_esp.c - td_net_ops_t for the ESP32-C6 on top of TinyDesk Shell's Wi-Fi and
+ * net_esp.c - td_net_ops_t for the ESP-IDF boards on top of TinyDesk Shell's Wi-Fi and
  * Ethernet modules, so the Network app shares TinyDesk Shell's saved networks.
  *
  * Scans and connects can take seconds, so each runs in a short-lived worker

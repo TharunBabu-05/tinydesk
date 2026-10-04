@@ -6,13 +6,18 @@
 #
 # The desktop is served on the built-in USB Serial/JTAG port; ESP-IDF logs
 # and the console go to UART0. TinyDesk Shell runs inside the Terminal app.
+# The application is shared with the classic ESP32 projects
+# (../esp_idf/app); this project brings the link (main/link_usj.c), the
+# partitions and the sdkconfig.
 cmake_minimum_required(VERSION 3.16)
 
 get_filename_component(TD_ROOT "${CMAKE_CURRENT_LIST_DIR}/../.." ABSOLUTE)
 set(TDSH_SDK_ROOT "${TD_ROOT}/third_party/tdsh")
 
 set(IDF_TARGET "esp32c6" CACHE STRING "tinydesk target")
-list(APPEND EXTRA_COMPONENT_DIRS "${TDSH_SDK_ROOT}/ports/esp_idf/components")
+list(APPEND EXTRA_COMPONENT_DIRS
+    "${TDSH_SDK_ROOT}/ports/esp_idf/components"
+    "${TD_ROOT}/ports/esp_idf/components")
 
 # The firmware version shown by Software Update and `ota status`.
 # Override for a test build: set TD_VERSION=0.1.4 before idf.py build.

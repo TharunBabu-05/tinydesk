@@ -1,5 +1,5 @@
 /*
- * ota_esp.h - firmware updates on the ESP32-C6 (see ota_esp.c).
+ * ota_esp.h - firmware updates on the ESP-IDF boards (see ota_esp.c).
  */
 #ifndef OTA_ESP_H
 #define OTA_ESP_H

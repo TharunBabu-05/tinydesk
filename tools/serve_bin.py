@@ -3,8 +3,9 @@
 serve_bin.py - host a firmware .bin on your local network (stdlib only).
 
 Usage:
-    python serve_bin.py                          # serves ./tinydesk.bin on port 8000
-    python serve_bin.py build/tinydesk.bin -p 8080
+    python tools/serve_bin.py ports/esp32c6/build/tinydesk.bin     # on port 8000
+    python tools/serve_bin.py ports/esp32/build/tinydesk.bin -p 8080
+    python serve_bin.py                          # ./tinydesk.bin
 
 Endpoints:
     /               web page with size, SHA-256, build time and a download link

@@ -1,11 +1,11 @@
 /*
- * main.c - tinydesk on the ESP32-C6.
+ * main.c - tinydesk on the ESP-IDF boards (ESP32-C6, classic ESP32).
  *
  * Boot order:
  *   1. NVS, then TinyDesk Shell (mounts LittleFS at /fs, users, network manager).
  *   2. esp_log is hooked so every log line lands in the Log Viewer (the
- *      ESP-IDF console is off: UART0/UART1 are the RS-485 channels).
- *   3. The tinydesk task takes over the USB Serial/JTAG port and runs the
+ *      ESP-IDF console is off: the UARTs are the desktop or RS-485 lines).
+ *   3. The tinydesk task takes over the board's link (link.h) and runs the
  *      desktop. TinyDesk Shell starts in its own task when the Terminal opens.
  */
 #include <stdarg.h>

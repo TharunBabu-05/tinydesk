@@ -1,5 +1,5 @@
 /*
- * net_esp.h - network control for the Network app (ESP32-C6).
+ * net_esp.h - network control for the Network app (ESP-IDF).
  */
 #ifndef NET_ESP_H
 #define NET_ESP_H

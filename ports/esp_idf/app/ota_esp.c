@@ -1,5 +1,5 @@
 /*
- * ota_esp.c - firmware updates for the ESP32-C6 (td_ota_ops_t and the `ota`
+ * ota_esp.c - firmware updates for the ESP-IDF boards (td_ota_ops_t and the `ota`
  * shell command).
  *
  * The flash has two app slots (ota_0, ota_1). An update is written to the
